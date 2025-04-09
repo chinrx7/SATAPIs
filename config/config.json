@@ -1,0 +1,21 @@
+{
+    "API" : {
+        "port": 9000
+    },
+    "MYSQL": {
+        "host": "localhost",
+        "database": "SATDB",
+        "user": "root",
+        "password": "PP@@ssw0rd555"                                 
+    },
+    "Token": {
+        "Secret": "dgfdsggyjgg546fhhirhr4r4fgtrt5rghrufythsfdghds565ry5uru5r65uut5ututu2fdhfhcv65n",
+        "Period": "1d"
+    },
+    "FileServer" : {
+        "Path" : "C:\\ProjectFiles\\"
+    },
+    "Debug" : {
+        "Enable" : 1
+    }
+}

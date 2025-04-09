@@ -1,0 +1,53 @@
+{
+    "mode": "new",
+    "Data": {
+        "Key": "sfbfbbngnb59dg94g444445454fg4444447",
+        "Name": "CU Solar Monitoring",
+        "Type": 1,
+        "SubType": 1,
+        "Status": 1,
+        "Mgm_id": 1,
+        "Warranty": 1.5,
+        "Start_Date": "2025-03-01",
+        "End_Date": "2025-06-01",
+        "CM_ID": "c8751001f7b89f1df0f34e4d16485188",
+        "Contact": "K.อดิศักดิ์ 027--7127000",
+        "Payment": "ดาวน์ 30% fat 20% sat 20% Hanover 30%",
+        "Teams": {
+            "Staff": [
+                1
+            ]
+        },
+        "Tasks": [
+            {
+                "Name": "FDS Design",
+                "Start_Date": "2025-03-01",
+                "End_Date": "2025-02-15",
+                "Man_Hour": 72.5,
+                "Staff_ID": 1,
+                "Remark": "somrthig I belong",
+                "Require_Doc": "FDS",
+                "Status": 1
+            }
+        ],
+        "Documents": [
+            {
+                "pos": 0,
+                "pj_id": "fjjfdndnjg4f4h4fh44h4fd9f957hg4",
+                "docname": "Quatation",
+                "doc_no": "1.0",
+                "description": "Quatation",
+                "type": 1,
+                "groupfile": 0
+            }
+        ],
+        "Products":[
+            {
+                "pd_id": 1,
+                "qty": 1,
+                "sn" : "xxxxxxx, yyyyyy, zzzzzzz",
+                "warranty" : 1
+            }
+        ]
+    }
+}
