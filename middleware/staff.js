@@ -1,5 +1,6 @@
 const db = require('./mysql');
 const logger = require('./log');
+const crypto = require('crypto');
 
 module.exports.AddStaff = async (Staff) => {
     let res;
@@ -8,19 +9,21 @@ module.exports.AddStaff = async (Staff) => {
 
         const exist = await db.ExecQuery(query);
 
+        const hexID = crypto.randomBytes(16).toString('hex');
+
         if (exist.length === 0) {
-            query = `INSERT INTO ee_staffs (staff_id, Fname, Lname, Department, Position) VALUES ('${Staff.staff_id}', '${Staff.FirstName}', '${Staff.SurName}', 
+            query = `INSERT INTO ee_staffs (staff_id, Fname, Lname, Department, Position) VALUES ('${hexID}', '${Staff.FirstName}', '${Staff.SurName}', 
             '${Staff.Department}', '${Staff.Position}')`;
 
             await db.ExecQuery(query);
 
-            query = `INSERT INTO ee_users (staff_id, username, upassword) VALUES ('${Staff.staff_id}', '${Staff.uname}', 
+            query = `INSERT INTO ee_users (staff_id, username, upassword) VALUES ('${hexID}', '${Staff.uname}', 
             MD5('${Staff.password}'))`;
 
             await db.ExecQuery(query);
 
             for await(const a of Staff.access){
-                query = `INSERT INTO ee_access (staff_id, module, access) VALUES ('${Staff.staff_id}', '${a.module}', '${a.access}')`;
+                query = `INSERT INTO ee_access (staff_id, module, access) VALUES ('${hexID}', '${a.module}', '${a.access}')`;
                 await db.ExecQuery(query);
             }
 
