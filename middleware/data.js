@@ -85,7 +85,7 @@ module.exports.NewContact = async (Contact) => {
 
     const exist = await db.ExecQuery(query);
     if (exist.length === 0) {
-        query = `INSERT INTO cm_contatcts (cm_id, name, position, email, remark, phone) VALUES 
+        query = `INSERT INTO cm_contacts (cm_id, name, position, email, remark, phone) VALUES 
         ('${Contact.cm_id}', '${Contact.name}', '${Contact.position}', '${Contact.email}', '${Contact.remark}', '${Contact.phone}')`;
         try {
             await db.ExecQuery(query);
@@ -158,7 +158,14 @@ module.exports.NewProject = async (Project, Files) => {
     const exist = await db.ExecQuery(query);
 
     if (exist.length === 0) {
-        const IO = await generatePJID(Project.Type);
+        let IO;
+        if(!Project.IO){
+            IO = await generatePJID(Project.Type);
+        }
+        else{
+            IO = Project.IO;
+        }
+
         const Cdate = format(new Date(), 'yyyy-MM-dd');
         query = `INSERT INTO pj_projects (pj_id, io, name, type, cm_id, create_date, start_date, end_date, manager_id, warranty,
                  pay_term, status, contact, subtype) VALUES ('${Project.Key}', '${IO}', '${Project.Name}', '${Project.Type}', '${Project.CM_ID}', '${Cdate}',
@@ -179,6 +186,8 @@ module.exports.NewProject = async (Project, Files) => {
                     ('${Project.Key}', '${task.Name}', '${task.Start_Date}', '${task.End_Date}', '${task.Man_Hour}', '${task.Staff_ID}', '${task.Remark}',
                     '${task.Require_Doc}', '${task.Status}')`;
 
+                console.log(query)
+                
                 await db.ExecQuery(query);
             }
         }
@@ -527,8 +536,8 @@ module.exports.createDO = async (D) => {
     const do_no = await generateDO();
 
     try {
-        let query = `INSERT INTO pj_do (do_no, pj_id, cm_id, c_id, c_phone, customer_ref, remark, create_date, ee_id) VALUES 
-    ('${do_no}', '${D.pj_id}', '${D.cm_id}', '${D.c_id}', '${D.c_phone}','${D.c_ref}', '${D.remark}', '${Cdate}', '${D.staff}')`;
+        let query = `INSERT INTO pj_do (do_no, pj_id, cm_id, c_id, cm_phone, customer_ref, remark, create_date, ee_id) VALUES 
+    ('${do_no}', '${D.pj_id}', '${D.cm_id}', '${D.c_id}', '${D.cm_phone}','${D.c_ref}', '${D.remark}', '${Cdate}', '${D.staff}')`;
 
         await db.ExecQuery(query);
 
@@ -553,7 +562,7 @@ module.exports.updateDO = async (D) => {
     const Cdate = format(new Date(), 'yyyy-MM-dd HH:mm:ss');
 
     try {
-        let query = `UPDATE pj_do SET cm_id='${D.cm_id}', c_id='${D.c_id}', c_phone='${D.c_phone}', 
+        let query = `UPDATE pj_do SET cm_id='${D.cm_id}', c_id='${D.c_id}', cm_phone='${D.cm_phone}', 
     customer_ref='${D.c_ref}', edit_date='${Cdate}', ee_id='${D.staff}' WHERE do_no='${D.do_no}'`;
 
         await db.ExecQuery(query);
