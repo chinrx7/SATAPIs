@@ -5,6 +5,7 @@ const fileService = require('../middleware/file');
 const { config } = require('../middleware/config');
 const fs = require('fs');
 const staff = require('../middleware/staff');
+const { el } = require('date-fns/locale');
 
 const errors = {
     err: [
@@ -22,6 +23,8 @@ const errors = {
         }
     ]
 }
+
+let dblog = { module: '', action: '', staff: 0 };
 
 module.exports.Authen = async (req, res) => {
     logger.debuglog('User authen');
@@ -43,8 +46,18 @@ module.exports.Customer = async (req, res) => {
     if (token) {
         if (req.body) {
             const { mode, Data } = req.body;
+
+            const Mname = 'Customer';
+            if (mode !== 'get') {
+                if(Data.user_id === undefined){
+                    Data.user_id = 0;
+                }
+                dblog = { module: Mname, action: `${mode} ${Data.name}`, staff: Data.user_id };
+                logger.DBlog(dblog);
+            }
+
             if (mode === 'new') {
-                logger.debuglog('New customer');
+                logger.debuglog(action);
                 const result = await data.NewCustomer(Data);
                 if (result.affectedRows === 1) {
                     res.status(200).json('ok');
@@ -93,6 +106,14 @@ module.exports.Contact = async (req, res) => {
     if (token) {
         if (req.body) {
             const { mode, contacts } = req.body;
+
+            const Mname = 'Contact';
+            if(Data.user_id === undefined){
+                Data.user_id = 0;
+            }
+            dblog = { module: Mname, action: `${mode} ${contacts.name}`, staff: Data.user_id};
+            logger.DBlog(dblog);
+
             if (mode === 'new') {
                 result = await data.NewContact(contacts);
             }
@@ -128,6 +149,14 @@ module.exports.Project = async (req, res) => {
                 request = req.body
             }
             let { mode, Data } = request;
+
+            const Mname = 'Project';
+            if(Data.user_id === undefined){
+                Data.user_id = 0;
+            }
+            dblog = { module: Mname, action: `${mode} ${Data.Name}`, staff: Data.user_id};
+            logger.DBlog(dblog);
+
             if (mode === 'new') {
                 logger.debuglog('New Project');
                 Data = replaceJsonNull(Data);
@@ -166,6 +195,18 @@ module.exports.DO = async (req, res) => {
 
             let result;
             const { mode, Data } = req.body;
+
+            const Mname = 'DO';
+            if (mode !== 'get') {
+                if (mode !== 'list') {
+                    if (Data.user_id === undefined) {
+                        Data.user_id = 0;
+                    }
+                    dblog = { module: Mname, action: `${mode} ${Data.pj_id}`, staff: Data.user_id }
+                    logger.DBlog(dblog);
+                }
+            }
+
             if (mode === 'new') {
                 logger.debuglog('Create DO');
                 result = await data.createDO(Data);
@@ -251,6 +292,14 @@ module.exports.SaveFiles = async (req, res) => {
 
         if (datas) {
             const result = await data.UploadFile(datas, file);
+
+            const Mname = 'File';
+            if(datas.user_id === undefined){
+                datas.user_id = 0;
+            }
+            dblog = { module: Mname, action: `Upload file ${datas.IO} ${datas.docname} ${datas.doc_no}`, staff: datas.user_id };
+            logger.DBlog(dblog);
+
             res.status(200).json(result)
         }
         else {
@@ -286,6 +335,15 @@ module.exports.delFile = async (req, res) => {
     if (token) {
         const { Info } = req.body;
         const result = await data.DelFile(Info);
+        const Mname = 'File';
+        if(datas.user_id === undefined){
+            datas.user_id = 0;
+        }
+        if(Info.user_id === undefined){
+            Info.user_id = 0;
+        }
+        dblog = { module : Mname, action : `Delete File ${Info.ID} ${Info.IO}`, staff: Info.user_id};
+        logger.DBlog(dblog);
         res.status(200).json(result);
     }
     else {
@@ -378,15 +436,40 @@ module.exports.getProjectProduct = async (req, res) => {
 }
 
 module.exports.Staff = async (req, res) => {
-    logger.debuglog('Add user');
 
     const token = req.headers["authorization"];
     if (token) {
         if (req.body) {
             let result;
             const { mode, Data } = req.body;
+            if(Data.user_id === undefined){
+                Data.user_id = 0;
+            }
+            let dbLog = {module:'Staff', action:'Test', staff:Data.user_id}
+            logger.DBlog(dbLog)
             if(mode === 'new'){
+                logger.debuglog('Add user');
                 result = await staff.AddStaff(Data);
+            }
+            else if(mode === 'update'){
+                logger.debuglog('update user');
+                result = await staff.EditStaff(Data);
+            }
+            else if(mode === 'delete'){
+                logger.debuglog('delete user');
+                result = await staff.removeStaff(Data.staff_id)
+            }
+            else if(mode === 'list'){
+                logger.debuglog('get staff list');
+                result = await staff.getlist();
+            }
+            else if(mode ==='getstaff'){
+                logger.debuglog('get staff');
+                result = await staff.getStaff(Data.staff_id);
+            }
+            else if(mode === 'chgpass'){
+                logger.debuglog('staff change password');
+                result = await staff.changePassword(Data);
             }
 
             res.status(200).json(result);

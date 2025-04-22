@@ -1,6 +1,8 @@
 const fs = require('fs');
 const util = require('util');
 const { config } = require('./config');
+const db = require('./mysql');
+const { format } = require('date-fns');
 
 module.exports.loginfo = (log) => {
 
@@ -36,5 +38,39 @@ module.exports.loginfo = (log) => {
 module.exports.debuglog = (log) => {
     if(config.Debug.Enable === 1){
         this.loginfo(log);
+    }
+}
+
+module.exports.DBlog = async (log) => {
+    try {
+        const Edate = format(new Date(), 'yyyy-MM-dd HH:mm:ss');
+        const Cdate = format(new Date(), 'yyyy_MM')
+
+        const Tname = `sys_event_${Cdate}`;
+
+        let query = `select COUNT(*) AS EXIST FROM information_schema.TABLES WHERE TABLE_SCHEMA='satdb' AND TABLE_NAME='${Tname}'`;
+
+        const Texist = await db.ExecQuery(query);
+
+        if (Texist[0].EXIST === 0) {
+            query = `CREATE TABLE ${Tname} (
+            ID int NOT NULL AUTO_INCREMENT,
+            module tinytext,
+            action tinytext,
+            event_date datetime(3) DEFAULT NULL,
+            staff_id int DEFAULT NULL,
+            PRIMARY KEY (ID)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3`
+
+            await db.ExecQuery(query);
+        }
+
+        query = `INSERT INTO ${Tname} (module, action, event_date, staff_id) 
+    VALUES ('${log.module}', '${log.action}', '${Edate}', '${log.staff}')`;
+
+        await db.ExecQuery(query);
+    }
+    catch (err) {
+        this.loginfo(`DB log error : ${err}`);
     }
 }
