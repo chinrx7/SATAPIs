@@ -1,7 +1,6 @@
 const db = require('./mysql');
 const logger = require('./log');
 const crypto = require('crypto');
-const { el } = require('date-fns/locale');
 
 module.exports.AddStaff = async (Staff) => {
     let res;

@@ -1,6 +1,6 @@
 {
     "API" : {
-        "port": 9000
+        "port": 9001
     },
     "MYSQL": {
         "host": "localhost",

@@ -24,5 +24,8 @@ router.post('/newproduct', ctrl.SaveProducts);
 
 router.post('/do',ctrl.DO);
 router.post('/staff', ctrl.Staff);
+router.post('/quotation', ctrl.Quotation);
+
+router.post('/impcustomer', ctrl.importCustomer);
 
 module.exports = router;

@@ -5,7 +5,8 @@ const fileService = require('../middleware/file');
 const { config } = require('../middleware/config');
 const fs = require('fs');
 const staff = require('../middleware/staff');
-const { el } = require('date-fns/locale');
+const sale = require('../middleware/sale');
+const csv = require('../middleware/csv');
 
 const errors = {
     err: [
@@ -39,11 +40,37 @@ module.exports.Authen = async (req, res) => {
     }
 }
 
+module.exports.importCustomer = async (req,res)=>{
+    csv.importCustomer();
+}
+
+module.exports.Quotation = async (req, res) => {
+    const token = req.headers["authorization"];
+    if (auth.ValidateToken(token)) {
+        const { mode, Data } = req.body;
+        let result;
+        if (mode === 'new') {
+            result = await sale.CreateQT(Data);
+
+        }
+        else if(mode === 'get'){
+            result = await sale.getQT(Data);
+        }
+
+        if(result){
+            res.status(200).json(result);
+        }
+    }
+    else {
+        res.status(errors.err[2].code).json(errors.err[2].msg);
+    }
+}
+
 module.exports.Customer = async (req, res) => {
 
     const token = req.headers["authorization"];
 
-    if (token) {
+    if (auth.ValidateToken(token)) {
         if (req.body) {
             const { mode, Data } = req.body;
 
@@ -103,7 +130,7 @@ module.exports.Customer = async (req, res) => {
 module.exports.Contact = async (req, res) => {
     const token = req.headers["authorization"];
     let result;
-    if (token) {
+    if (auth.ValidateToken(token)) {
         if (req.body) {
             const { mode, contacts } = req.body;
 
@@ -139,7 +166,7 @@ module.exports.Contact = async (req, res) => {
 module.exports.Project = async (req, res) => {
 
     const token = req.headers["authorization"];
-    if (token) {
+    if (auth.ValidateToken(token)) {
         if (req.body) {
             let request;
             if (req.body.datas) {
@@ -190,7 +217,7 @@ replaceJsonNull = (Json) => {
 
 module.exports.DO = async (req, res) => {
     const token = req.headers["authorization"];
-    if (token) {
+    if (auth.ValidateToken(token)) {
         if (req.body) {
 
             let result;
@@ -240,7 +267,7 @@ module.exports.DO = async (req, res) => {
 module.exports.getProjectDetail = async (req, res) => {
     logger.debuglog('Get project detail')
     const token = req.headers["authorization"];
-    if (token) {
+    if (auth.ValidateToken(token)) {
         if (req.body) {
             const { pj_id } = req.body;
             const result = await data.getProjectDetail(pj_id);
@@ -258,7 +285,7 @@ module.exports.getProjectDetail = async (req, res) => {
 module.exports.Info = async (req, res) => {
     const token = req.headers["authorization"];
 
-    if (token) {
+    if (auth.ValidateToken(token)) {
         if (req.body) {
             const { mode } = req.body;
             if (mode === 'project') {
@@ -284,7 +311,7 @@ module.exports.SaveFiles = async (req, res) => {
 
     const token = req.headers["authorization"];
 
-    if (token) {
+    if (auth.ValidateToken(token)) {
 
         const datas = JSON.parse(req.body.data)
 
@@ -332,7 +359,7 @@ module.exports.getFile = async (req, res) => {
 module.exports.delFile = async (req, res) => {
     logger.debuglog('Delete file');
     const token = req.headers["authorization"];
-    if (token) {
+    if (auth.ValidateToken(token)) {
         const { Info } = req.body;
         const result = await data.DelFile(Info);
         const Mname = 'File';
@@ -356,7 +383,7 @@ module.exports.GetProjectLists = async (req, res) => {
     logger.debuglog('Get project lists');
     const token = req.headers["authorization"];
 
-    if (token) {
+    if (auth.ValidateToken(token)) {
         const result = await data.GetProjectLists();
         res.status(200).json(result);
     }
@@ -369,7 +396,7 @@ module.exports.SaveProducts = async (req, res) => {
     logger.debuglog('Save master product');
     const token = req.headers["authorization"];
 
-    if (token) {
+    if (auth.ValidateToken(token)) {
         if (req.body) {
             const { Products } = req.body;
             const result = await data.SaveProducts(Products);
@@ -388,7 +415,7 @@ module.exports.SaveProjectProducts = async (req, res) => {
     logger.debuglog('Save master product');
     const token = req.headers["authorization"];
 
-    if (token) {
+    if (auth.ValidateToken(token)) {
         if (req.body) {
             const { Products } = req.body;
             const result = await data.SaveProjectProduct(Products);
@@ -407,7 +434,7 @@ module.exports.getProduct = async (req, res) => {
     logger.debuglog('Get product');
     const token = req.headers["authorization"];
 
-    if (token) {
+    if (auth.ValidateToken(token)) {
         const result = await data.GetProducts();
         res.status(200).json(result);
     }
@@ -420,7 +447,7 @@ module.exports.getProjectProduct = async (req, res) => {
     logger.debuglog('Get project product');
 
     const token = req.headers["authorization"];
-    if (token) {
+    if (auth.ValidateToken(token)) {
         if (req.body) {
             const { pj_id } = req.body;
             const result = await data.getProjectProduct(pj_id);
@@ -438,15 +465,11 @@ module.exports.getProjectProduct = async (req, res) => {
 module.exports.Staff = async (req, res) => {
 
     const token = req.headers["authorization"];
-    if (token) {
+    if (auth.ValidateToken(token)   ) {
         if (req.body) {
             let result;
             const { mode, Data } = req.body;
-            if(Data.user_id === undefined){
-                Data.user_id = 0;
-            }
-            let dbLog = {module:'Staff', action:'Test', staff:Data.user_id}
-            logger.DBlog(dbLog)
+
             if(mode === 'new'){
                 logger.debuglog('Add user');
                 result = await staff.AddStaff(Data);

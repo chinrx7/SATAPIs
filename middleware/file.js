@@ -90,3 +90,37 @@ module.exports.delFile = async (fileInfo) => {
 
     return res;
 }
+
+module.exports.saveQT = async (fileInfo,File) => {
+    const cYear = new Date().getFullYear();
+    const uploadPath = `${config.FileServer.Path}Quotaion\\${cYear}`;
+
+    if (!fs.existsSync(uploadPath)) {
+        fs.mkdirSync(uploadPath);
+    }
+
+    if (!fs.existsSync(filePath)) {
+
+        const promise = await new Promise((resolve, reject) => {
+            File.mv(filePath, (err) => {
+                resolve(err);
+            })
+        })
+
+        if (promise) {
+            res = 'error'
+        }
+        else {
+            const query =''
+
+            await db.ExecQuery(query);
+
+
+            res = 'file uploaded'
+        }
+    }
+    else {
+        res = 'file existed';
+    }
+
+}

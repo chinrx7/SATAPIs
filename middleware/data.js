@@ -7,8 +7,8 @@ const { fi, el } = require('date-fns/locale');
 
 module.exports.NewCustomer = async (Customer) => {
 
-    let query = `INSERT INTO cm_customers (cm_id, name, address, branch, taxid, bill_condition, credit_term)  VALUES ('${Customer.key}', '${Customer.name}', 
-    '${Customer.address}', '${Customer.branch}', '${Customer.taxid}', '${Customer.bill_con}', '${Customer.credit_term}');`
+    let query = `INSERT INTO cm_customers (cm_id, name_th, address_th, branch_th, name_eng, address_eng, branch_eng, taxid, bill_condition, credit_term)  VALUES ('${Customer.key}', '${Customer.name_th}', 
+    '${Customer.address_th}', '${Customer.branch_th}',, '${Customer.name_eng}', '${Customer.address_eng}', '${Customer.branch_eng}', '${Customer.taxid}', '${Customer.bill_con}', '${Customer.credit_term}');`
 
     const res = await db.ExecQuery(query);
 
@@ -30,7 +30,8 @@ module.exports.NewCustomer = async (Customer) => {
 }
 
 module.exports.UpdateCustomer = async (C) => {
-    let query = `UPDATE cm_customers SET name='${C.name}', address='${C.address}', branch='${C.branch}', taxid='${C.taxid}', bill_condition='${C.bill_con}', credit_term='${C.credit_term}' WHERE cm_id='${C.cm_id}'`;
+    let query = `UPDATE cm_customers SET name_th='${C.name_th}', address_th='${C.address_th}', branch_th='${C.branch_th}', name_eng='${C.name_eng}', address_th='${C.address_eng}', branch_th='${C.branch_eng}',
+     taxid='${C.taxid}', bill_condition='${C.bill_con}', credit_term='${C.credit_term}' WHERE cm_id='${C.cm_id}'`;
     await db.ExecQuery(query);
 
     if (C.phones) {
