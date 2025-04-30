@@ -47,10 +47,17 @@ module.exports.importCustomer = async (req,res)=>{
 module.exports.Quotation = async (req, res) => {
     const token = req.headers["authorization"];
     if (auth.ValidateToken(token)) {
-        const { mode, Data } = req.body;
+        let request;
+        if (req.body.datas) {
+            request = JSON.parse(req.body.datas);
+        }
+        else {
+            request = req.body
+        }
+        const { mode, Data } = request;
         let result;
         if (mode === 'new') {
-            result = await sale.CreateQT(Data);
+            result = await sale.CreateQT(Data, req.files);
 
         }
         else if(mode === 'get'){

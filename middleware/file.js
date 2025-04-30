@@ -3,6 +3,8 @@ const db = require('./mysql');
 const fs = require('fs');
 const { config } = require('./config');
 const { compareSync } = require('bcrypt');
+const { el } = require('date-fns/locale');
+const { resolve } = require('path');
 
 module.exports.SaveFiles = async (Options, File) => {
 
@@ -91,36 +93,61 @@ module.exports.delFile = async (fileInfo) => {
     return res;
 }
 
-module.exports.saveQT = async (fileInfo,File) => {
-    const cYear = new Date().getFullYear();
-    const uploadPath = `${config.FileServer.Path}Quotaion\\${cYear}`;
+module.exports.saveQT = async (File,fName) => {
+    let res;
 
-    if (!fs.existsSync(uploadPath)) {
+    const cYear = new Date().getFullYear();
+    const uploadPath = `${config.FileServer.Path}Quotation\\${cYear}`;
+
+    if(!fs.existsSync(`${config.FileServer.Path}\\Quotation`)){
+        fs.mkdirSync(`${config.FileServer.Path}\\Quotation`);
+    }
+    if(!fs.existsSync(uploadPath)){
         fs.mkdirSync(uploadPath);
     }
 
-    if (!fs.existsSync(filePath)) {
+    const filePath = `${uploadPath}\\${fName}`;
 
+    if(!fs.filePath){
         const promise = await new Promise((resolve, reject) => {
             File.mv(filePath, (err) => {
                 resolve(err);
             })
-        })
+        });
 
-        if (promise) {
+        if(promise) {
             res = 'error'
         }
-        else {
-            const query =''
-
-            await db.ExecQuery(query);
-
-
+        else{
             res = 'file uploaded'
         }
     }
-    else {
-        res = 'file existed';
+    else{
+        res ='file existed'
     }
+
+
+    // if (!fs.existsSync(uploadPath)) {
+    //     fs.mkdirSync(uploadPath);
+    // }
+
+    // if (!fs.existsSync(filePath)) {
+
+    //     const promise = await new Promise((resolve, reject) => {
+    //         File.mv(filePath, (err) => {
+    //             resolve(err);
+    //         })
+    //     })
+
+    //     if (promise) {
+    //         res = 'error'
+    //     }
+    //     else {
+    //         res = 'file uploaded'
+    //     }
+    // }
+    // else {
+    //     res = 'file existed';
+    // }
 
 }
