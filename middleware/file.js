@@ -93,6 +93,20 @@ module.exports.delFile = async (fileInfo) => {
     return res;
 }
 
+module.exports.getQT = async (Info) => {
+    let res;
+    const QYear = new Date(Info.create_date).getFullYear();
+    const filePath = `${config.FileServer.Path}\\${QYear}\\${Info.no}_${Info.rev}${Info.file_extension}`
+
+    if(fs.existsSync(filePath)){
+        res = fs.readFileSync(filePath);
+    }
+    else{
+        res = 'File not found';
+    }
+    return res;
+}
+
 module.exports.saveQT = async (File,fName) => {
     let res;
 

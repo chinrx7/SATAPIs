@@ -8,8 +8,8 @@ module.exports.CreateQT = async (Data, Files) => {
 
     const Cdate = format(new Date(), 'yyyy-MM-dd HH:mm:ss');
 
-    let query = `INSERT INTO sl_quotation (no, rev, cm_id, cm_text, sale_id, parent, create_date) VALUES
-        ('${Data.no}', '${Data.rev}', ${Data.cm_id}, ${chkNull(Data.cm_text)}, '${Data.staff_id}', ${chkNull(Data.parent)}, '${Cdate}')`;
+    let query = `INSERT INTO sl_quotation (no, rev, cm_id, cm_text, sale_id, parent, create_date, file_extension, remark) VALUES
+        ('${Data.no}', '${Data.rev}', ${Data.cm_id}, ${chkNull(Data.cm_text)}, '${Data.staff_id}', ${chkNull(Data.parent)}, '${Cdate}', '.${getfileExtension(Files.file.name)}', '${Data.remark}')`;
 
     try{
         if (Files) {
@@ -37,14 +37,29 @@ module.exports.getQT = async (Option) => {
     qYear = Cdate.getFullYear();
 
     if(view === 'm'){
-        query = `SELECT * FROM sl_quotation WHERE MONTH(create_date)='${qMonth}' AND YEAR(create_date)='${qYear}'`;
+        query = `SELECT * FROM vw_qt WHERE MONTH(create_date)='${qMonth}' AND YEAR(create_date)='${qYear}'`;
     }
     else if(view === 'y'){
-        query = `SELECT * FROM sl_quotation WHERE YEAR(create_date)='${qYear}'`;
+        query = `SELECT * FROM vw_qt WHERE YEAR(create_date)='${qYear}'`;
     }
 
     res = await db.ExecQuery(query);
 
+    return res;
+}
+
+module.exports.updateQT = async (s) => {
+    let res;
+
+    const query = `UPDATE sl_quotation SET status='${s.status}', remark='${s.remark}' WHERE ID='${s.ID}'`;
+    try{
+        await db.ExecQuery(query);
+        res = 'ok';
+    }
+    catch(err){
+        logger.loginfo(`update QT error : ${err}`);
+        res = 'error';
+    }
     return res;
 }
 

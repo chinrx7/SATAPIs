@@ -187,7 +187,7 @@ module.exports.NewProject = async (Project, Files) => {
                     ('${Project.Key}', '${task.Name}', '${task.Start_Date}', '${task.End_Date}', '${task.Man_Hour}', '${task.Staff_ID}', '${task.Remark}',
                     '${task.Require_Doc}', '${task.Status}')`;
 
-                console.log(query)
+                //console.log(query)
                 
                 await db.ExecQuery(query);
             }
@@ -408,7 +408,7 @@ module.exports.getProjectDetail = async (pjkey) => {
 module.exports.GetRequireInfo = async () => {
     let res;
     try {
-        let result = { ProjectTypes: [], ProjectStatus: [], TaskStatus: [], Staffs: [], Customers: [], DocType: [], PhoneType: [] };
+        let result = { ProjectTypes: [], ProjectStatus: [], TaskStatus: [], Staffs: [], Customers: [], DocType: [], PhoneType: [] ,QTStatus: [], TSStatus:[] };
         let query = `SELECT * FROM pj_type`;
         let qres = await db.ExecQuery(query);
         let Types = [];
@@ -428,7 +428,7 @@ module.exports.GetRequireInfo = async () => {
         qres = await db.ExecQuery(query);
         result.TaskStatus = qres;
 
-        query = `SELECT * FROM satdb.vw_staffs;`;
+        query = `SELECT * FROM vw_staffs;`;
         qres = await db.ExecQuery(query);
         result.Staffs = qres;
 
@@ -444,11 +444,19 @@ module.exports.GetRequireInfo = async () => {
         qres = await db.ExecQuery(query);
         result.PhoneType = qres;
 
+        query = `SELECT * FROM sl_qt_status`;
+        qres = await db.ExecQuery(query);
+        result.QTStatus = qres;
+
+        query = `SELECT * FROM ee_timesheet_status`;
+        qres = await db.ExecQuery(query);
+        result.TSStatus =qres;
+
         res = result;
 
     }
     catch (err) {
-        logger.loginfo(`Get staff error : ${err}`);
+        logger.loginfo(`Get Project Info error : ${err}`);
         res = 'error';
     }
     return res;

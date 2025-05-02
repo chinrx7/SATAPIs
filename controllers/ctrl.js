@@ -7,6 +7,7 @@ const fs = require('fs');
 const staff = require('../middleware/staff');
 const sale = require('../middleware/sale');
 const csv = require('../middleware/csv');
+const ee = require('../middleware/employee');
 
 const errors = {
     err: [
@@ -41,7 +42,31 @@ module.exports.Authen = async (req, res) => {
 }
 
 module.exports.importCustomer = async (req,res)=>{
-    csv.importCustomer();
+    //csv.importCustomer();
+}
+
+module.exports.Timesheet = async (req,res) => {
+    let result;
+    const token = req.headers["authorization"];
+    if (auth.ValidateToken(token)) {
+        const { mode, Data } = req.body;
+        if(mode === 'new'){
+            result = await ee.newTimeSheet(Data);
+        }
+        else if(mode === 'update'){
+            result = await ee.updateTimeSheet(Data);
+        }
+        else if(mode === 'get'){
+            result = await ee.getTimesheet(Data);
+        }
+
+        if(result){
+            res.status(200).json(result);
+        }
+    }
+    else{
+        res.status(errors.err[2].code).json(errors.err[2].msg);
+    }
 }
 
 module.exports.Quotation = async (req, res) => {
@@ -62,6 +87,20 @@ module.exports.Quotation = async (req, res) => {
         }
         else if(mode === 'get'){
             result = await sale.getQT(Data);
+        }
+        else if(mode === 'update'){
+            result = await sale.updateQT(Data);
+        }
+        else if(mode === 'getfile'){
+            const QYear = new Date(Data.create_date).getFullYear();
+    
+            const filePath = `${config.FileServer.Path}\\Quotation\\${QYear}\\${Data.no}_${Data.rev}${Data.file_extension}`
+            if(fs.existsSync(filePath)){
+                res.download(filePath, `${Data.no}_${Data.rev}${Data.file_extension}`);
+            }
+            else{
+                res.status(500).json('file not dound')
+            }
         }
 
         if(result){
@@ -140,12 +179,13 @@ module.exports.Contact = async (req, res) => {
     if (auth.ValidateToken(token)) {
         if (req.body) {
             const { mode, contacts } = req.body;
+            console.log(contacts)
 
             const Mname = 'Contact';
-            if(Data.user_id === undefined){
-                Data.user_id = 0;
+            if(contacts.user_id === undefined){
+                contacts.user_id = 0;
             }
-            dblog = { module: Mname, action: `${mode} ${contacts.name}`, staff: Data.user_id};
+            dblog = { module: Mname, action: `${mode} ${contacts.name}`, staff: contacts.user_id};
             logger.DBlog(dblog);
 
             if (mode === 'new') {
@@ -370,9 +410,6 @@ module.exports.delFile = async (req, res) => {
         const { Info } = req.body;
         const result = await data.DelFile(Info);
         const Mname = 'File';
-        if(datas.user_id === undefined){
-            datas.user_id = 0;
-        }
         if(Info.user_id === undefined){
             Info.user_id = 0;
         }

@@ -1,6 +1,7 @@
 const { Router } = require('express');
 const ctrl = require('../controllers/ctrl');
 const { randomInt } = require('crypto');
+const { ro } = require('date-fns/locale');
 
 
 const router = Router();
@@ -25,6 +26,7 @@ router.post('/newproduct', ctrl.SaveProducts);
 router.post('/do',ctrl.DO);
 router.post('/staff', ctrl.Staff);
 router.post('/quotation', ctrl.Quotation);
+router.post('/timesheet', ctrl.Timesheet);
 
 router.post('/impcustomer', ctrl.importCustomer);
 
