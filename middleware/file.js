@@ -28,7 +28,16 @@ module.exports.SaveFiles = async (Options, File) => {
             Folder = 'Internal'
     }
 
-    const uploadPath = `${config.FileServer.Path}${Folder}\\${Options.IO}`;
+    let q = `SELECT type from pj_file_type WHERE ID=${Options.type}`;
+
+    let subfoler = 'etc';
+    
+    const ft = await db.ExecQuery(q);
+    if(ft.length > 0){
+        subfoler = ft[0].type;
+    }
+
+    const uploadPath = `${config.FileServer.Path}${Folder}\\${Options.IO}\\${subfoler}`;
 
     if (!fs.existsSync(uploadPath)) {
         fs.mkdirSync(uploadPath);

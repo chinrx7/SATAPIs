@@ -423,7 +423,7 @@ module.exports.delFile = async (req, res) => {
         const { Info } = req.body;
         const result = await data.DelFile(Info);
         const Mname = 'File';
-        if(Info.user_id === undefined){
+        if(!Info.user_id){
             Info.user_id = 0;
         }
         dblog = { module : Mname, action : `Delete File ${Info.ID} ${Info.IO}`, staff: Info.user_id};

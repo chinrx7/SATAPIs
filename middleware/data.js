@@ -255,7 +255,7 @@ module.exports.UploadFile = async (Info, F) => {
     try {
         const ext = getfileExtension(F.name);
         const fileInfo = {
-            IO: Info.IO, pj_id: Info.pj_id, filename: `${Info.docname}_${Info.doc_no}.${ext}`, docname: Info.docname, description: Info.description
+            IO: Info.IO, pj_id: Info.pj_id, filename: `${F.name}`, docname: Info.docname, description: Info.description
             , type: Info.type, groupfile: Info.groupfile, doc_no: Info.doc_no
         }
         res = await fdata.SaveFiles(fileInfo, F);
