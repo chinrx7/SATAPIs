@@ -8,13 +8,28 @@ module.exports.CreateQT = async (Data, Files) => {
 
     const Cdate = format(new Date(), 'yyyy-MM-dd HH:mm:ss');
 
-    let query = `INSERT INTO sl_quotation (no, rev, cm_id, cm_text, sale_id, parent, create_date, file_extension, remark) VALUES
-        ('${Data.no}', '${Data.rev}', ${Data.cm_id}, ${chkNull(Data.cm_text)}, '${Data.staff_id}', ${chkNull(Data.parent)}, '${Cdate}', '.${getfileExtension(Files.file.name)}', '${Data.remark}')`;
+    let query = `INSERT INTO sl_quotation (no, rev, cm_id, cm_text, sale_id, parent, create_date, remark, qt_date) VALUES
+        ('${Data.no}', '${Data.rev}', ${Data.cm_id}, ${chkNull(Data.cm_text)}, '${Data.staff_id}', ${chkNull(Data.parent)}, '${Cdate}'
+        , '${Data.remark}', '${Data.qt_date}')`;
 
     try{
-        if (Files) {
-            const fname = `${Data.no}_${Data.rev}.${getfileExtension(Files.file.name)}`
-            fdata.saveQT(Files.file,fname);
+
+        await db.ExecQuery(query);
+
+        if (Array.isArray(Files.file) === true) {
+
+            for await (const f of Files.file) {
+                query = `INSERT INTO sl_qt_files (qt_no, rev, filename) VALUES ('${Data.no}','${Data.rev}','${f.name}')`
+                fdata.saveQT(f, f.name, Data);
+
+                await db.ExecQuery(query);
+            }
+        }
+        else{
+            const f  = Files.file;
+            query = `INSERT INTO sl_qt_files (qt_no, rev, filename) VALUES ('${Data.no}','${Data.rev}','${f.name}')`
+            fdata.saveQT(f, f.name, Data);
+
             await db.ExecQuery(query);
         }
         res = 'ok';
@@ -27,8 +42,35 @@ module.exports.CreateQT = async (Data, Files) => {
     return res;
 }
 
-module.exports.getQT = async (Option) => {
+module.exports.uploadFile = async (Info, Files) => {
     let res;
+    try {
+
+        if (Array.isArray(Files.file) === true) {
+            for await (const f of Files.file) {
+                fdata.saveQT(f, f.name, Info);
+                const query = `INSERT INTO sl_qt_files (qt_no, rev, filename) VALUES  ('${Info.no}', '${Info.rev}', '${f.name}')`;
+                await db.ExecQuery(query);
+            }
+        }
+        else {
+            const f = Files.file;
+            fdata.saveQT(f, f.name, Info);
+            const query = `INSERT INTO sl_qt_files (qt_no, rev, filename) VALUES  ('${Info.no}', '${Info.rev}', '${f.name}')`;
+            await db.ExecQuery(query);
+        }
+
+        res = 'ok';
+    }
+    catch(err){
+        logger.loginfo(`QT upload file error : ${err}`);
+        res = 'error';
+    }
+    return res;
+}
+
+module.exports.getQT = async (Option) => {
+    let res = [];
 
     let { view, date } = Option;
     const Cdate = new Date(date);
@@ -43,7 +85,16 @@ module.exports.getQT = async (Option) => {
         query = `SELECT * FROM vw_qt WHERE YEAR(create_date)='${qYear}'`;
     }
 
-    res = await db.ExecQuery(query);
+    const qt = await db.ExecQuery(query);
+
+    for await(let q of qt){
+        query = `SELECT * FROM sl_qt_files WHERE qt_no='${q.no}' AND rev='${q.rev}'`;
+        const files = await db.ExecQuery(query);
+
+        q.Files = files;
+
+        res.push(q);
+    }
 
     return res;
 }

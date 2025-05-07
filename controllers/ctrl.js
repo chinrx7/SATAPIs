@@ -9,6 +9,8 @@ const sale = require('../middleware/sale');
 const csv = require('../middleware/csv');
 const ee = require('../middleware/employee');
 const notice = require('../middleware/notification');
+const db = require('../middleware/mysql');
+const fdata =  require('../middleware/file');
 
 const errors = {
     err: [
@@ -72,6 +74,9 @@ module.exports.Timesheet = async (req,res) => {
         else if(mode === 'get'){
             result = await ee.getTimesheet(Data);
         }
+        else if(mode === 'get_pjtask'){
+            result = await ee.getPJtask(Data);
+        }
 
         if(result){
             res.status(200).json(result);
@@ -96,7 +101,6 @@ module.exports.Quotation = async (req, res) => {
         let result;
         if (mode === 'new') {
             result = await sale.CreateQT(Data, req.files);
-
         }
         else if(mode === 'get'){
             result = await sale.getQT(Data);
@@ -104,10 +108,16 @@ module.exports.Quotation = async (req, res) => {
         else if(mode === 'update'){
             result = await sale.updateQT(Data);
         }
+        else if(mode === 'upload'){
+            result = await sale.uploadFile(Data, req.files);
+        }
+        else if(mode === 'removefile'){
+            result = await fdata.delQT(Data);
+        }
         else if(mode === 'getfile'){
-            const QYear = new Date(Data.create_date).getFullYear();
+            const QYear = new Date(Data.qt_date).getFullYear();
     
-            const filePath = `${config.FileServer.Path}\\Quotation\\${QYear}\\${Data.no}_${Data.rev}${Data.file_extension}`
+            const filePath = `${config.FileServer.Path}\\Quotation\\${QYear}\\${Data.no}\\${Data.rev}\\${Data.filename}`
             if(fs.existsSync(filePath)){
                 res.download(filePath, `${Data.no}_${Data.rev}${Data.file_extension}`);
             }
@@ -403,7 +413,7 @@ module.exports.getFile = async (req, res) => {
     const token = req.headers["authorization"];
     if (token) {
         const { Info } = req.body;
-        const filePath = `${config.FileServer.Path}${Info.folder}\\${Info.IO}\\${Info.filename}`;
+        const filePath = `${config.FileServer.Path}${Info.folder}\\${Info.pj_id}\\${Info.type}\\${Info.filename}`;
         if (fs.existsSync(filePath)) {
             res.download(filePath, Info.filename);
         }

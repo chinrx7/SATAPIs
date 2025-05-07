@@ -31,13 +31,14 @@ module.exports.SaveFiles = async (Options, File) => {
     let q = `SELECT type from pj_file_type WHERE ID=${Options.type}`;
 
     let subfoler = 'etc';
-    
+
     const ft = await db.ExecQuery(q);
-    if(ft.length > 0){
+    if (ft.length > 0) {
         subfoler = ft[0].type;
     }
 
     const uploadPath = `${config.FileServer.Path}${Folder}\\${Options.IO}\\${subfoler}`;
+
 
     if (!fs.existsSync(uploadPath)) {
         fs.mkdirSync(uploadPath);
@@ -77,12 +78,36 @@ module.exports.SaveFiles = async (Options, File) => {
 module.exports.GetFile = async (fileInfo) => {
     let res;
 
-    const filePath = `${config.FileServer.Path}${fileInfo.folder}\\${fileInfo.IO}\\${fileInfo.filename}`;
+    const query = `SELECT type, filename, pj_id FROM vw_files WHERE ID=${fileInfo.ID}`
+    const fobj = await db.ExecQuery(query);
 
-    if(fs.existsSync(filePath)){
+    const PIO = fobj[0].pj_id.substring(0, 2);
+    let Folder;
+    switch (PIO) {
+        case 'PJ':
+            Folder = 'Project';
+            break;
+        case 'EN':
+            Folder = 'Engineering';
+            break;
+        case 'PD':
+            Folder = 'Product'
+            break;
+        case 'MA':
+            Folder = 'MA'
+            break;
+        case 'IN':
+            Folder = 'Internal'
+    }
+
+    const filePath = `${config.FileServer.Path}${Folder}\\${fobj[0].IO}\\${fobj[0].type}\\${fobj[0].filename}`;
+
+    console.log(filePath)
+
+    if (fs.existsSync(filePath)) {
         res = fs.readFileSync(filePath);
     }
-    else{
+    else {
         res = 'File not found';
     }
     return res;
@@ -91,13 +116,16 @@ module.exports.GetFile = async (fileInfo) => {
 module.exports.delFile = async (fileInfo) => {
     let res;
 
-    const filePath = `${config.FileServer.Path}${fileInfo.folder}\\${fileInfo.IO}\\${fileInfo.filename}`;
+    const query = `SELECT type, filename, pj_id FROM vw_files WHERE ID=${fileInfo.ID}`
+    const fobj = await db.ExecQuery(query);
 
-    if(fs.existsSync(filePath)){
+    const filePath = `${config.FileServer.Path}${fileInfo.folder}\\${fileInfo.IO}\\${fobj[0].type}\\${fileInfo.filename}`;
+
+    if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
         res = 'File deleted'
-    }   
-    else{
+    }
+    else {
         res = 'File not found';
     }
 
@@ -109,70 +137,71 @@ module.exports.getQT = async (Info) => {
     const QYear = new Date(Info.create_date).getFullYear();
     const filePath = `${config.FileServer.Path}\\${QYear}\\${Info.no}_${Info.rev}${Info.file_extension}`
 
-    if(fs.existsSync(filePath)){
+    if (fs.existsSync(filePath)) {
         res = fs.readFileSync(filePath);
     }
-    else{
+    else {
         res = 'File not found';
     }
     return res;
 }
 
-module.exports.saveQT = async (File,fName) => {
+module.exports.delQT = async (Info) => {
+    let res;
+    const cYear = new Date(Info.qt_date).getFullYear();
+    const uploadPath = `${config.FileServer.Path}Quotation\\${cYear}\\${Info.no}\\${Info.rev}\\${Info.filename}`;
+
+    if(fs.existsSync(uploadPath)){
+        fs.unlinkSync(uploadPath);
+        const query = `DELETE FROM sl_qt_files WHERE qt_no='${Info.no}' AND rev='${Info.rev}' AND filename='${Info.filename}'`;
+        await db.ExecQuery(query);
+        res = 'file deleted'
+    }
+    else{
+        res = 'file not found';
+    }
+
+}
+
+module.exports.saveQT = async (File, fName, Info) => {
     let res;
 
-    const cYear = new Date().getFullYear();
-    const uploadPath = `${config.FileServer.Path}Quotation\\${cYear}`;
+    const cYear = new Date(Info.qt_date).getFullYear();
+    const uploadPath1 = `${config.FileServer.Path}Quotation\\${cYear}`;
+    const uploadPath2 = `${config.FileServer.Path}Quotation\\${cYear}\\${Info.no}`;
+    const uploadPath3 = `${config.FileServer.Path}Quotation\\${cYear}\\${Info.no}\\${Info.rev}`;
 
-    if(!fs.existsSync(`${config.FileServer.Path}\\Quotation`)){
+    if (!fs.existsSync(`${config.FileServer.Path}\\Quotation`)) {
         fs.mkdirSync(`${config.FileServer.Path}\\Quotation`);
     }
-    if(!fs.existsSync(uploadPath)){
-        fs.mkdirSync(uploadPath);
+    if (!fs.existsSync(uploadPath1)) {
+        fs.mkdirSync(uploadPath1);
+    }
+    if (!fs.existsSync(uploadPath2)) {
+        fs.mkdirSync(uploadPath2);
+    }
+    if (!fs.existsSync(uploadPath3)) {
+        fs.mkdirSync(uploadPath3);
     }
 
-    const filePath = `${uploadPath}\\${fName}`;
+    const filePath = `${uploadPath3}\\${fName}`;
 
-    if(!fs.filePath){
+    if (!fs.filePath) {
         const promise = await new Promise((resolve, reject) => {
             File.mv(filePath, (err) => {
                 resolve(err);
             })
         });
 
-        if(promise) {
+        if (promise) {
             res = 'error'
         }
-        else{
+        else {
             res = 'file uploaded'
         }
     }
-    else{
-        res ='file existed'
+    else {
+        res = 'file existed'
     }
-
-
-    // if (!fs.existsSync(uploadPath)) {
-    //     fs.mkdirSync(uploadPath);
-    // }
-
-    // if (!fs.existsSync(filePath)) {
-
-    //     const promise = await new Promise((resolve, reject) => {
-    //         File.mv(filePath, (err) => {
-    //             resolve(err);
-    //         })
-    //     })
-
-    //     if (promise) {
-    //         res = 'error'
-    //     }
-    //     else {
-    //         res = 'file uploaded'
-    //     }
-    // }
-    // else {
-    //     res = 'file existed';
-    // }
 
 }
