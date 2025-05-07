@@ -8,6 +8,7 @@ const staff = require('../middleware/staff');
 const sale = require('../middleware/sale');
 const csv = require('../middleware/csv');
 const ee = require('../middleware/employee');
+const notice = require('../middleware/notification');
 
 const errors = {
     err: [
@@ -29,6 +30,7 @@ const errors = {
 let dblog = { module: '', action: '', staff: 0 };
 
 module.exports.Authen = async (req, res) => {
+    //notice.mailSend();
     logger.debuglog('User authen');
     if (req.body) {
         const { User, Password } = req.body;
@@ -43,6 +45,17 @@ module.exports.Authen = async (req, res) => {
 
 module.exports.importCustomer = async (req,res)=>{
     //csv.importCustomer();
+}
+
+module.exports.Tasks = async (req, res) => {
+    let result;
+    const token = req.headers["authorization"];
+    if (auth.ValidateToken(token)) {
+
+    }
+    else{
+        res.status(errors.err[2].code).json(errors.err[2].msg);
+    }
 }
 
 module.exports.Timesheet = async (req,res) => {

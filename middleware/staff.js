@@ -12,8 +12,8 @@ module.exports.AddStaff = async (Staff) => {
         const hexID = crypto.randomBytes(16).toString('hex');
 
         if (exist.length === 0) {
-            query = `INSERT INTO ee_staffs (staff_id, Fname, Lname, Department, Position) VALUES ('${hexID}', '${Staff.FirstName}', '${Staff.SurName}', 
-            '${Staff.Department}', '${Staff.Position}')`;
+            query = `INSERT INTO ee_staffs (staff_id, Fname, Lname, Department, Position, mail) VALUES ('${hexID}', '${Staff.FirstName}', '${Staff.SurName}', 
+            '${Staff.Department}', '${Staff.Position}', '${Staff.Mail}')`;
 
             await db.ExecQuery(query);
 
@@ -47,7 +47,7 @@ module.exports.EditStaff = async (Staff) => {
     let res;
     try {
         let query = `UPDATE ee_staffs SET Fname='${Staff.FirstName}', Lname='${Staff.SurName}', Department='${Staff.Department}',
-         Position='${Staff.Position}' WHERE staff_id='${Staff.staff_id}'`;
+         Position='${Staff.Position}', mail='${Staff.mail}' WHERE staff_id='${Staff.staff_id}'`;
 
         await db.ExecQuery(query);
 

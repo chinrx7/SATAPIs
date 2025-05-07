@@ -24,6 +24,8 @@ module.exports.SaveFiles = async (Options, File) => {
         case 'MA':
             Folder = 'MA'
             break;
+        case 'IN':
+            Folder = 'Internal'
     }
 
     const uploadPath = `${config.FileServer.Path}${Folder}\\${Options.IO}`;

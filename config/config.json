@@ -10,10 +10,13 @@
     },
     "Token": {
         "Secret": "dgfdsggyjgg546fhhirhr4r4fgtrt5rghrufythsfdghds565ry5uru5r65uut5ututu2fdhfhcv65n",
-        "Period": "1d"
+        "Period": "5d"
     },
     "FileServer" : {
         "Path" : "C:\\ProjectFiles\\"
+    },
+    "MailServer" : {
+
     },
     "Debug" : {
         "Enable" : 1

@@ -7,11 +7,11 @@ const { format } = require('date-fns');
 module.exports.loginfo = (log) => {
 
     const fdname = './log';
-    if(!fs.existsSync(fdname)){
+    if (!fs.existsSync(fdname)) {
         fs.mkdirSync(fdname);
     }
     //console.log(log);
-    const fdate = new Date().toISOString().slice(0,10);
+    const fdate = new Date().toISOString().slice(0, 10);
     //console.log(fdate)
 
     //console.log(fdate.replace(new RegExp(escapeRegExp(find), '/'),'-'));
@@ -23,12 +23,12 @@ module.exports.loginfo = (log) => {
 
     const log_stdout = process.stdout;
 
-    if(!fs.existsSync(fileName)){
-        const log_file = fs.createWriteStream(fileName, {flags : 'w'} );
+    if (!fs.existsSync(fileName)) {
+        const log_file = fs.createWriteStream(fileName, { flags: 'w' });
         log_file.write(util.format(msg) + '\n');
 
     }
-    else{
+    else {
         fs.appendFileSync(fileName, util.format(msg + '\n'));
     }
 
@@ -36,9 +36,32 @@ module.exports.loginfo = (log) => {
 }
 
 module.exports.debuglog = (log) => {
-    if(config.Debug.Enable === 1){
+    if (config.Debug.Enable === 1) {
         this.loginfo(log);
     }
+}
+
+module.exports.mailLog = (log) => {
+    const fdname = './log/mail_log';
+    if (!fs.existsSync(fdname)) {
+        fs.mkdirSync(fdname);
+    }
+    const fdate = new Date().toISOString().slice(0, 10);
+    const filename = `./log/mail_log/${fdate}.log`
+
+    const tmp = new Date().toLocaleTimeString();
+
+    const log_stdout = process.stdout;
+
+    if (!fs.existsSync(filename)) {
+        const log_file = fs.createWriteStream(filename, { flags: 'w' });
+        log_file.write(util.format(log) + '\n');
+    }
+    else {
+        fs.appendFileSync(filename, util.format(`${log}\n`));
+    }
+
+    log_stdout.write(util.format(log) + '\n');
 }
 
 module.exports.DBlog = async (log) => {
