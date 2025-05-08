@@ -79,6 +79,48 @@ module.exports.UpdateCustomer = async (C) => {
 
 }
 
+module.exports.AddShipAddr = async (S) => {
+    let res;
+    try {
+        const query = `INSERT INTO cm_ship_address (cm_id, address, is_primary) VALUES ('${S.cm_id}', '${S.address}', '${S.default}')`;
+        await db.ExecQuery(query);
+        res = 'ok';
+    }
+    catch (err) {
+        logger.loginfo(`Add shipping address error : ${err}`);
+        res = 'error';
+    }
+    return res;
+}
+
+module.exports.EditShipAddr = async (S) => {
+    let res;
+    try{
+        const query = `UPDATE cm_ship_address SET address='${S.address}', is_primary='${S.default}' WHERE ID='${S.ID}'`;
+        await db.ExecQuery(query);
+        res = 'ok';
+    }
+    catch(err){
+        logger.loginfo(`Edit shipping address error : ${err}`);
+        res  = 'error';
+    }
+    return res;
+}
+
+module.exports.DeleteShipAddr = async (S) => {
+    let res;
+    try{
+        const query = `DELETE FROM cm_ship_address WHERE ID='${S.ID}'`;
+        await db.ExecQuery(query);
+        res = 'ok';
+    }
+    catch(err){
+        logger.loginfo(`Delete Shipping address error : ${err}`);
+        res = 'error';
+    }
+    return res;
+}
+
 module.exports.NewContact = async (Contact) => {
     let res;
 

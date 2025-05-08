@@ -37,14 +37,19 @@ module.exports.SaveFiles = async (Options, File) => {
         subfoler = ft[0].type;
     }
 
-    const uploadPath = `${config.FileServer.Path}${Folder}\\${Options.IO}\\${subfoler}`;
+    const uploadPath1 = `${config.FileServer.Path}${Folder}\\${Options.IO}`;
+    const uploadPath2 = `${config.FileServer.Path}${Folder}\\${Options.IO}\\${subfoler}`;
 
 
-    if (!fs.existsSync(uploadPath)) {
-        fs.mkdirSync(uploadPath);
+    if (!fs.existsSync(uploadPath1)) {
+        fs.mkdirSync(uploadPath1);
     }
 
-    const filePath = `${uploadPath}\\${Options.filename}`;
+    if (!fs.existsSync(uploadPath2)) {
+        fs.mkdirSync(uploadPath2);
+    }
+
+    const filePath = `${uploadPath2}\\${Options.filename}`;
 
     if (!fs.existsSync(filePath)) {
 

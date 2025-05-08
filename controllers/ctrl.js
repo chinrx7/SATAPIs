@@ -185,6 +185,21 @@ module.exports.Customer = async (req, res) => {
                     res.status(200).json('error');
                 }
             }
+            else if(mode === 'add_ship') {
+                logger.debuglog('Add shipping address');
+                const result =  await data.AddShipAddr(Data);
+                res.status(200).json(result);
+            }
+            else if(mode === 'edit_ship') {
+                logger.debuglog('Edit shipping address');
+                const result =  await data.EditShipAddr(Data);
+                res.status(200).json(result);
+            }
+            else if(mode === 'del_ship') {
+                logger.debuglog('Delete shipping address');
+                const result =  await data.DeleteShipAddr(Data);
+                res.status(200).json(result);
+            }
         }
         else {
             res.status(errors.err[0].code).json(errors.err[0].msg);
