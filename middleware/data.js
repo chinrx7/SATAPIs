@@ -121,6 +121,26 @@ module.exports.DeleteShipAddr = async (S) => {
     return res;
 }
 
+module.exports.getShipAddr = async (S) => {
+    let res;
+    try{
+        let query;
+        if(S.all === 1){
+            query = 'SELECT * FROM cm_ship_address';
+            res = await db.ExecQuery(query);
+        }
+        else{
+            query = `SELECT * FROM cm_ship_address WHERE cm_id='${S.cm_id}'`;
+            res = await db.ExecQuery(query);
+        }
+    }
+    catch(err){
+        logger.loginfo(`get shipping address error : ${err}`);
+        res = 'error';
+    }
+    return res;
+}
+
 module.exports.NewContact = async (Contact) => {
     let res;
 
@@ -284,6 +304,66 @@ module.exports.NewProject = async (Project, Files) => {
     //     res = 'error';
     // }
 
+    return res;
+}
+
+module.exports.addTask = async (task) => {
+    let res;
+    try {
+        const query = `INSERT INTO pj_tasks (pj_id, task, start_date, end_date, hour_expected, staff_id, remark, require_doc, status, parent) VALUES
+        ('${task.pj_key}', '${task.Name}', '${task.Start_Date}', '${task.End_Date}', '${task.Man_Hour}', '${task.Staff_ID}', '${task.Remark}',
+        '${task.Require_Doc}', '${task.Status}', ${chkNull(task.Parent)})`;
+
+        await db.ExecQuery(query);
+
+        res = 'ok';
+    }
+    catch (err) {
+        logger.loginfo(`Add Task error : ${err}`);
+        res = 'error';
+    }
+
+    return res;
+}
+
+chkNull = (obj) => {
+    let res;
+    if(obj === null){
+        res = null;
+    }
+    else{
+        res =`'${obj}'`;
+    }
+
+    return res;
+}
+
+module.exports.editTask = async (task) => {
+    let res;
+
+    try{
+        const query = `UPDATE pj_tasks SET task='${task.Name}', start_date='${task.Start_Date}', end_date='${task.End_Date}', hour_expected='${task.Man_Hour}'
+                , staff_id='${task.Staff_ID}', remark='${task.Remark}', require_doc='${task.Require_Doc}', status='${task.Status}', parent=${chkNull(task.Parent)} WHERE ID='${task.ID}' AND pj_id='${task.pj_key}'`;
+        await db.ExecQuery(query);
+        res = 'ok';
+    }
+    catch(err){
+        logger.loginfo(`Edit task error : ${err}`);
+        res = 'error';
+    }
+    return res;
+}
+
+module.exports.getTask = async (task) => {
+    let res;
+    try{
+        const query = `SELECT * FROM vw_project_tasks WHERE pj_id='${task.pj_key}'`
+        res = await db.ExecQuery(query);
+    }
+    catch(err){
+        logger.loginfo(`Get tasks error : ${err}`)
+        res = 'error';
+    }
     return res;
 }
 
@@ -592,8 +672,9 @@ module.exports.createDO = async (D) => {
 
         await db.ExecQuery(query);
 
-        for await (const p of D.p_id) {
-            query = `UPDATE pj_project_products SET do_no='${do_no}' WHERE ID='${p}'`
+        for await (const p of D.product) {
+            query = `INSERT INTO pj_do_products (do_no, pd_id, sn, quantity) VALUES (
+            '${do_no}', '${p.pd_id}','${p.sn}', '${p.quantity}')`;
             await db.ExecQuery(query);
         }
 
@@ -618,13 +699,17 @@ module.exports.updateDO = async (D) => {
 
         await db.ExecQuery(query);
 
-        for await (const ip of D.p_id) {
-            query = `UPDATE pj_project_products SET do_no='${D.do_no}' WHERE ID='${ip}'`
-            await db.ExecQuery(query);
-        }
-
-        for await (const rp of D.rp_id) {
-            query = `UPDATE pj_project_products SET do_no=null WHERE ID='${rp}'`
+        for await (const p of D.product){
+            if(p.flag === 'i'){
+                query = `INSERT INTO pj_do_products (do_no, pd_id, sn, quantity) VALUES (
+                    '${doc_no}', '${p.pd_id}','${p.sn}', '${p.quantity}')`;
+            }
+            else if(p.flag ==='u'){
+                query = `UPDATE pj_do_products SET pd_id='${p.pd_id}', sn='${p.sn}', quantity='${p.quantity}' WHERE ID='${p.ID}'`;
+            }
+            else if(p.flag === 'd'){
+                query = `DELETE FROM pj_do_products WHERE ID='${p.ID}'`;
+            }
             await db.ExecQuery(query);
         }
 
@@ -645,7 +730,7 @@ module.exports.getDO = async (No) => {
         let query = `SELECT * FROM vw_do WHERE do_no='${No}'`;
         const detail = await db.ExecQuery(query);
 
-        query = `SELECT * FROM vw_project_products WHERE do_no='${No}'`;
+        query = `SELECT * FROM vw_do_products WHERE do_no='${No}'`;
         const product = await db.ExecQuery(query);
 
         res = { Details: detail[0], Products: product }

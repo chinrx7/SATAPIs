@@ -27,6 +27,9 @@ router.post('/do',ctrl.DO);
 router.post('/staff', ctrl.Staff);
 router.post('/quotation', ctrl.Quotation);
 router.post('/timesheet', ctrl.Timesheet);
+router.post('/task', ctrl.Tasks);
+
+router.post('/eventlog', ctrl.eventlog);
 
 router.post('/impcustomer', ctrl.importCustomer);
 

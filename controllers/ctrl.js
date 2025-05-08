@@ -11,6 +11,8 @@ const ee = require('../middleware/employee');
 const notice = require('../middleware/notification');
 const db = require('../middleware/mysql');
 const fdata =  require('../middleware/file');
+const { log } = require('console');
+const { kill } = require('process');
 
 const errors = {
     err: [
@@ -45,15 +47,42 @@ module.exports.Authen = async (req, res) => {
     }
 }
 
+module.exports.eventlog = async (req,res) => {
+    let result;
+    const token = req.headers["authorization"];
+    if (auth.ValidateToken(token)) {
+        const { module, action, user_id } = req.body;
+        dblog.module = module;
+        dblog.action = action;
+        dblog.staff = user_id;
+
+        const result = await logger.DBlog(dblog);
+        res.status(200).json(result);
+    }
+    else{
+        res.status(errors.err[2].code).json(errors.err[2].msg);
+    }
+}
+
 module.exports.importCustomer = async (req,res)=>{
     //csv.importCustomer();
 }
 
 module.exports.Tasks = async (req, res) => {
-    let result;
     const token = req.headers["authorization"];
     if (auth.ValidateToken(token)) {
-
+        const { mode, Data } = req.body;
+        let result;
+        if(mode === 'new'){
+            result = await data.addTask(Data);
+        }
+        else if(mode === 'edit'){
+            result =  await data.editTask(Data);
+        }
+        else if(mode === 'get'){
+            result = await data.getTask(Data);
+        }
+        res.status(200).json(result);
     }
     else{
         res.status(errors.err[2].code).json(errors.err[2].msg);
@@ -198,6 +227,11 @@ module.exports.Customer = async (req, res) => {
             else if(mode === 'del_ship') {
                 logger.debuglog('Delete shipping address');
                 const result =  await data.DeleteShipAddr(Data);
+                res.status(200).json(result);
+            }
+            else if(mode === 'get_ship'){
+                logger.debuglog('Get shipping address');
+                const result = await data.getShipAddr(Data);
                 res.status(200).json(result);
             }
         }

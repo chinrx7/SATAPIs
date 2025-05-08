@@ -65,6 +65,7 @@ module.exports.mailLog = (log) => {
 }
 
 module.exports.DBlog = async (log) => {
+    let res;
     try {
         const Edate = format(new Date(), 'yyyy-MM-dd HH:mm:ss');
         const Cdate = format(new Date(), 'yyyy_MM')
@@ -92,8 +93,11 @@ module.exports.DBlog = async (log) => {
     VALUES ('${log.module}', '${log.action}', '${Edate}', '${log.staff}')`;
 
         await db.ExecQuery(query);
+        res = 'ok';
     }
     catch (err) {
         this.loginfo(`DB log error : ${err}`);
+        res = 'error';
     }
+    return res;
 }
