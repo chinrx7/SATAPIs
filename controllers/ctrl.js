@@ -11,8 +11,7 @@ const ee = require('../middleware/employee');
 const notice = require('../middleware/notification');
 const db = require('../middleware/mysql');
 const fdata =  require('../middleware/file');
-const { log } = require('console');
-const { kill } = require('process');
+const masterd = require('../middleware/masterd');
 
 const errors = {
     err: [
@@ -48,7 +47,6 @@ module.exports.Authen = async (req, res) => {
 }
 
 module.exports.eventlog = async (req,res) => {
-    let result;
     const token = req.headers["authorization"];
     if (auth.ValidateToken(token)) {
         const { module, action, user_id } = req.body;
@@ -68,6 +66,32 @@ module.exports.importCustomer = async (req,res)=>{
     //csv.importCustomer();
 }
 
+module.exports.pCategory = async (req, res) => {
+    const token = req.headers["authorization"];
+    if (auth.ValidateToken(token)) {
+        let result;
+        const { mode, Data } = req.body;
+        switch(mode){
+            case 'get':
+                result = await masterd.getProjectCategory();
+            break;
+            case 'new':
+                result = await masterd.addSubCategory(Data);
+            break;
+            case 'edit':
+                result = await masterd.editSubCategory(Data);
+            break;
+            case 'delete':
+                result = await masterd.delSubCategory(Data);
+            break;
+        }
+        res.status(200).json(result);
+    }
+    else {
+        res.status(errors.err[2].code).json(errors.err[2].msg);
+    }
+}
+
 module.exports.Tasks = async (req, res) => {
     const token = req.headers["authorization"];
     if (auth.ValidateToken(token)) {
@@ -81,6 +105,9 @@ module.exports.Tasks = async (req, res) => {
         }
         else if(mode === 'get'){
             result = await data.getTask(Data);
+        }
+        else if(mode === 'delete'){
+            result = await data.delTask(Data);
         }
         res.status(200).json(result);
     }
@@ -182,7 +209,7 @@ module.exports.Customer = async (req, res) => {
             }
 
             if (mode === 'new') {
-                logger.debuglog(action);
+                logger.debuglog('New customer');
                 const result = await data.NewCustomer(Data);
                 if (result.affectedRows === 1) {
                     res.status(200).json('ok');

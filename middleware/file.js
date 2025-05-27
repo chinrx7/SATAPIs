@@ -11,6 +11,7 @@ module.exports.SaveFiles = async (Options, File) => {
     let res;
     const Type = Options.IO.substring(0, 2);
     let Folder;
+
     switch (Type) {
         case 'PJ':
             Folder = 'Project';
@@ -19,17 +20,24 @@ module.exports.SaveFiles = async (Options, File) => {
             Folder = 'Engineering';
             break;
         case 'PD':
-            Folder = 'Product'
+            Folder = 'Product';
             break;
         case 'MA':
-            Folder = 'MA'
+            Folder = 'MA';
             break;
         case 'IN':
-            Folder = 'Internal'
+            Folder = 'Internal';
+            break;
+        default:
+            let f = `SELECT t.type FROM pj_projects p JOIN pj_type t ON p.type = t.ID WHERE p.pj_id = '${Options.pj_id}'`;
+            const fr = await db.ExecQuery(f);
+            if(fr && fr.length > 0){
+                Folder = fr[0].type;
+            }
+            break;
     }
 
     let q = `SELECT type from pj_file_type WHERE ID=${Options.type}`;
-
     let subfoler = 'etc';
 
     const ft = await db.ExecQuery(q);

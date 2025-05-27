@@ -8,7 +8,7 @@ const { fi, el } = require('date-fns/locale');
 module.exports.NewCustomer = async (Customer) => {
 
     let query = `INSERT INTO cm_customers (cm_id, name_th, address_th, branch_th, name_eng, address_eng, branch_eng, taxid, bill_condition, credit_term)  VALUES ('${Customer.key}', '${Customer.name_th}', 
-    '${Customer.address_th}', '${Customer.branch_th}',, '${Customer.name_eng}', '${Customer.address_eng}', '${Customer.branch_eng}', '${Customer.taxid}', '${Customer.bill_con}', '${Customer.credit_term}');`
+    '${Customer.address_th}', '${Customer.branch_th}', '${Customer.name_eng}', '${Customer.address_eng}', '${Customer.branch_eng}', '${Customer.taxid}', '${Customer.bill_con}', '${Customer.credit_term}');`
 
     const res = await db.ExecQuery(query);
 
@@ -258,10 +258,8 @@ module.exports.NewProject = async (Project, Files) => {
         if (Project.Products.length > 0) {
             for await (const p of Project.Products) {
 
-                query = `INSERT INTO pj_project_products (pj_id, pd_id, qty, warranty, sn) VALUES ('${Project.Key}', '${p.pd_id}', '${p.qty}',
-                     '${p.warranty}', '${p.sn}')`
-
-
+                query = `INSERT INTO pj_project_products (pj_id, pd_id, product, qty) VALUES ('${Project.Key}', '${p.pd_id}', '${p.product}',
+                     '${p.qty}')`
                 await db.ExecQuery(query);
             }
         }
@@ -349,6 +347,20 @@ module.exports.editTask = async (task) => {
     }
     catch(err){
         logger.loginfo(`Edit task error : ${err}`);
+        res = 'error';
+    }
+    return res;
+}
+
+module.exports.delTask = async (task) => {
+    let res;
+    try{
+        const query  = `DELETE FROM pj_tasks WHERE ID='${task.ID}'`;
+        await db.ExecQuery(query);
+        res = 'ok';
+    }
+    catch(err){
+        logger.loginfo(`Delete task error : ${err}`);
         res = 'error';
     }
     return res;
@@ -461,12 +473,12 @@ module.exports.UpdateProject = async (Project) => {
                 const flag = p.Flag;
                 switch (flag) {
                     case 'i':
-                        query = `INSERT INTO pj_project_products (pj_id, pd_id, qty, warranty, sn) VALUES ('${Project.Key}', '${p.pd_id}', '${p.qty}',
-                 '${p.warranty}', '${p.sn}')`;
+                        query = `INSERT INTO pj_project_products (pj_id, pd_id, product, qty) VALUES ('${Project.Key}', '${p.pd_id}', '${p.product}', 
+                            '${p.qty}')`;
                         await db.ExecQuery(query);
                         break;
                     case 'u':
-                        query = `UPDATE pj_project_products SET pd_id='${p.pd_id}', qty='${p.qty}', warranty='${p.warranty}', sn='${p.sn}' WHERE ID='${p.ID}'`;
+                        query = `UPDATE pj_project_products SET pd_id='${p.pd_id}', product='${p.product}', qty='${p.qty}' WHERE ID='${p.ID}'`;
                         await db.ExecQuery(query);
                         break;
                     case 'd':
@@ -515,7 +527,7 @@ module.exports.getProjectDetail = async (pjkey) => {
 
     const tasks = await db.ExecQuery(query);
 
-    query = `SELECT * FROM vw_project_products WHERE pj_id='${pjkey}'`;
+    query = `SELECT * FROM pj_project_products WHERE pj_id='${pjkey}'`;
 
     const product = await db.ExecQuery(query);
 
@@ -530,7 +542,7 @@ module.exports.getProjectDetail = async (pjkey) => {
 module.exports.GetRequireInfo = async () => {
     let res;
     try {
-        let result = { ProjectTypes: [], ProjectStatus: [], TaskStatus: [], Staffs: [], Customers: [], DocType: [], PhoneType: [] ,QTStatus: [], TSStatus:[] };
+        let result = { ProjectTypes: [], ProjectStatus: [], TaskStatus: [], Staffs: [], Customers: [], DocType: [], PhoneType: [] ,QTStatus: [], TSStatus:[],AccessModule:[] };
         let query = `SELECT * FROM pj_type`;
         let qres = await db.ExecQuery(query);
         let Types = [];
@@ -573,6 +585,10 @@ module.exports.GetRequireInfo = async () => {
         query = `SELECT * FROM ee_timesheet_status`;
         qres = await db.ExecQuery(query);
         result.TSStatus =qres;
+
+        query = `SELECT * FROM sys_module`;
+        qres = await db.ExecQuery(query);
+        result.AccessModule = qres;
 
         res = result;
 
@@ -667,14 +683,14 @@ module.exports.createDO = async (D) => {
     const do_no = await generateDO();
 
     try {
-        let query = `INSERT INTO pj_do (do_no, pj_id, cm_id, c_id, cm_phone, customer_ref, remark, create_date, ee_id) VALUES 
-    ('${do_no}', '${D.pj_id}', '${D.cm_id}', '${D.c_id}', '${D.cm_phone}','${D.c_ref}', '${D.remark}', '${Cdate}', '${D.staff}')`;
+        let query = `INSERT INTO pj_do (do_no, pj_id, cm_id, c_id, cm_phone, customer_ref, remark, create_date, ee_id, ship_id) VALUES 
+    ('${do_no}', '${D.pj_id}', '${D.cm_id}', '${D.c_id}', '${D.cm_phone}','${D.c_ref}', '${D.remark}', '${Cdate}', '${D.staff}', '${D.ship_id}')`;
 
         await db.ExecQuery(query);
 
         for await (const p of D.product) {
-            query = `INSERT INTO pj_do_products (do_no, pd_id, sn, quantity) VALUES (
-            '${do_no}', '${p.pd_id}','${p.sn}', '${p.quantity}')`;
+            query = `INSERT INTO pj_do_products (do_no, pd_id, sn, quantity, warranty) VALUES (
+            '${do_no}', '${p.pd_id}','${p.sn}', '${p.quantity}', '${p.warranty ? p.warranty : 0}')`;
             await db.ExecQuery(query);
         }
 
@@ -694,18 +710,18 @@ module.exports.updateDO = async (D) => {
     const Cdate = format(new Date(), 'yyyy-MM-dd HH:mm:ss');
 
     try {
-        let query = `UPDATE pj_do SET cm_id='${D.cm_id}', c_id='${D.c_id}', cm_phone='${D.cm_phone}', 
-    customer_ref='${D.c_ref}', edit_date='${Cdate}', ee_id='${D.staff}' WHERE do_no='${D.do_no}'`;
+        let query = `UPDATE pj_do SET cm_id='${D.cm_id}', c_id='${D.c_id}', cm_phone='${D.c_phone}', 
+    customer_ref='${D.c_ref}', edit_date='${Cdate}', ee_id='${D.staff}', ship_id='${D.ship_id}' WHERE do_no='${D.do_no}'`;
 
         await db.ExecQuery(query);
 
         for await (const p of D.product){
             if(p.flag === 'i'){
-                query = `INSERT INTO pj_do_products (do_no, pd_id, sn, quantity) VALUES (
-                    '${doc_no}', '${p.pd_id}','${p.sn}', '${p.quantity}')`;
+                query = `INSERT INTO pj_do_products (do_no, pd_id, sn, quantity, warranty) VALUES (
+                    '${D.do_no}', '${p.pd_id}','${p.sn}', '${p.quantity}', '${p.warranty}')`;
             }
             else if(p.flag ==='u'){
-                query = `UPDATE pj_do_products SET pd_id='${p.pd_id}', sn='${p.sn}', quantity='${p.quantity}' WHERE ID='${p.ID}'`;
+                query = `UPDATE pj_do_products SET pd_id='${p.pd_id}', sn='${p.sn}', quantity='${p.quantity}', warranty='${p.warranty}' WHERE ID='${p.ID}'`;
             }
             else if(p.flag === 'd'){
                 query = `DELETE FROM pj_do_products WHERE ID='${p.ID}'`;
@@ -730,10 +746,13 @@ module.exports.getDO = async (No) => {
         let query = `SELECT * FROM vw_do WHERE do_no='${No}'`;
         const detail = await db.ExecQuery(query);
 
-        query = `SELECT * FROM vw_do_products WHERE do_no='${No}'`;
+        query = `SELECT address from cm_ship_address WHERE ID='${detail[0].ship_id}'`;
+        const shipadr = await db.ExecQuery(query);
+
+        query = `SELECT * FROM pj_do_products WHERE do_no='${No}'`;
         const product = await db.ExecQuery(query);
 
-        res = { Details: detail[0], Products: product }
+        res = { Details: detail[0], ShipAddress: shipadr[0], Products: product }
     }
     catch (err) {
         logger.loginfo(`Get DO error : ${err}`)
@@ -791,6 +810,9 @@ generatePJID = async (Type) => {
     else if (Type === 4) {
         //MA
         prefix = 'MA';
+    }
+    else if(Type === 5){
+        prefix = 'IN';
     }
 
     query = `SELECT count(*) as 'cnt' from satdb.pj_projects where io like '${prefix}%' AND YEAR(create_date)='${new Date().getFullYear()}'`;
