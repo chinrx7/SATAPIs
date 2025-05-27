@@ -132,8 +132,8 @@ module.exports.delFile = async (fileInfo) => {
     const query = `SELECT type, filename, pj_id FROM vw_files WHERE ID=${fileInfo.ID}`
     const fobj = await db.ExecQuery(query);
 
-    const filePath = `${config.FileServer.Path}${fileInfo.folder}\\${fileInfo.IO}\\${fobj[0].type}\\${fileInfo.filename}`;
-
+    const filePath = `${config.FileServer.Path}${fileInfo.folder}\\${fileInfo.IO}\\${fobj[0].type}\\${fobj[0].filename}`;
+    // console.log(filePath)
     if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
         res = 'File deleted'

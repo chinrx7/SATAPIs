@@ -404,10 +404,15 @@ module.exports.UploadFile = async (Info, F) => {
 module.exports.DelFile = async (Info) => {
     let res;
     try {
-        fdata.delFile(Info);
-        const query = `DELETE FROM pj_files WHERE ID='${Info.ID}'`;
-        db.ExecQuery(query);
-        res = 'ok';
+        const result = await fdata.delFile(Info);
+        //console.log(result)
+        if(result && result == 'File deleted'){
+            const query = `DELETE FROM pj_files WHERE ID='${Info.ID}'`;
+            db.ExecQuery(query);
+            res = 'ok';
+        } else {
+            res = 'error';
+        }
     }
     catch (err) {
         res = 'error';
