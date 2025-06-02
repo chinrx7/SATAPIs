@@ -273,7 +273,7 @@ module.exports.NewProject = async (Project, Files) => {
                 const ext = getfileExtension(f.name);
                 const doc = Project.Documents[0];
                 const fileInfo = {
-                    IO: IO, pj_id: Project.Key, filename: `${doc.docname}_${doc.doc_no}.${ext}`, docname: doc.docname, description: doc.description
+                    IO: IO, pj_id: Project.Key, filename: `${doc.docname}`/*`${doc.docname}_${doc.doc_no}.${ext}`*/, docname: doc.docname, description: doc.description
                     , type: doc.type, groupfile: doc.groupfile, doc_no: doc.doc_no
                 }
                 fdata.SaveFiles(fileInfo, f);
@@ -283,7 +283,7 @@ module.exports.NewProject = async (Project, Files) => {
                     f = Files.file[doc.pos];
                     const ext = getfileExtension(f.name);
                     const fileInfo = {
-                        IO: IO, pj_id: Project.Key, filename: `${doc.docname}_${doc.doc_no}.${ext}`, docname: doc.docname, description: doc.description
+                        IO: IO, pj_id: Project.Key, filename: `${doc.docname}`/*`${doc.docname}_${doc.doc_no}.${ext}`*/, docname: doc.docname, description: doc.description
                         , type: doc.type, groupfile: doc.groupfile, doc_no: doc.doc_no
                     }
                     fdata.SaveFiles(fileInfo, Files.file[doc.pos]);

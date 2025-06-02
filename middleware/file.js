@@ -57,7 +57,7 @@ module.exports.SaveFiles = async (Options, File) => {
         fs.mkdirSync(uploadPath2);
     }
 
-    const filePath = `${uploadPath2}\\${Options.filename}`;
+    const filePath = `${uploadPath2}\\${/*Options.filename*/Options.docname}`;
 
     if (!fs.existsSync(filePath)) {
 
@@ -72,7 +72,7 @@ module.exports.SaveFiles = async (Options, File) => {
         }
         else {
             const query = `INSERT INTO pj_files (pj_io, filename, docname, doc_no, folder, description, type, group_file) VALUES ('${Options.IO}', 
-        '${Options.filename}', '${Options.docname}', '${Options.doc_no}', '${Folder}', '${Options.description}', '${Options.type}', '${Options.groupfile}')`;
+        '${/*Options.filename*/Options.docname}', '${Options.docname}', '${Options.doc_no}', '${Folder}', '${Options.description}', '${Options.type}', '${Options.groupfile}')`;
 
             await db.ExecQuery(query);
 
