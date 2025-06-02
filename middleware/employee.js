@@ -8,8 +8,13 @@ module.exports.newTimeSheet = async (T) => {
     query = `INSERT INTO ee_timesheet (ee_id, taskname, pj_taskid, status, progress, start_time, end_time, detail, remark)
     VALUES ('${T.user_id}','${T.taskname}',${T.pj_taskid},'${T.status}','${T.progress}','${T.start_time}','${T.end_time}','${T.detail}','${T.remark}')`;
 
+    updateQuery = `UPDATE pj_tasks 
+    SET status = '${T.status}', finish_date = '${T.end_time}' 
+    WHERE ID = ${T.pj_taskid}`;
+
     try{
         await db.ExecQuery(query);
+        await db.ExecQuery(updateQuery);
         res = 'ok';
     }
     catch(err){

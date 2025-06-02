@@ -50,11 +50,11 @@ module.exports.SaveFiles = async (Options, File) => {
 
 
     if (!fs.existsSync(uploadPath1)) {
-        fs.mkdirSync(uploadPath1);
+        fs.mkdirSync(uploadPath1, { recursive: true });
     }
 
     if (!fs.existsSync(uploadPath2)) {
-        fs.mkdirSync(uploadPath2);
+        fs.mkdirSync(uploadPath2, { recursive: true });
     }
 
     const filePath = `${uploadPath2}\\${/*Options.filename*/Options.docname}`;
