@@ -4,6 +4,7 @@ const fs = require('fs');
 const fdata = require('./file');
 const { format } = require('date-fns');
 const { fi, el } = require('date-fns/locale');
+const { mailSend } = require('./notification');
 
 module.exports.NewCustomer = async (Customer) => {
 
@@ -311,9 +312,44 @@ module.exports.addTask = async (task) => {
         const query = `INSERT INTO pj_tasks (pj_id, task, start_date, end_date, hour_expected, staff_id, remark, require_doc, status, parent) VALUES
         ('${task.pj_key}', '${task.Name}', '${task.Start_Date}', '${task.End_Date}', '${task.Man_Hour}', '${task.Staff_ID}', '${task.Remark}',
         '${task.Require_Doc}', '${task.Status}', ${chkNull(task.Parent)})`;
-
         await db.ExecQuery(query);
 
+        if (task.Staff_ID && task.Staff_ID >= 1 && task.pj_key) {
+            const [staffList, projectList] = await Promise.all([
+                db.ExecQuery(`SELECT * FROM satdb.ee_staffs`),
+                db.ExecQuery(`SELECT * FROM satdb.pj_projects WHERE pj_id='${task.pj_key}'`)
+            ]);
+
+            if (staffList?.length && projectList?.length) {
+                const staff = staffList.find(s => s.ID == task.Staff_ID) ?? null;
+                const manager = staffList.find(s => s.ID == projectList[0].manager_id) ?? null;
+
+                if (staff?.mail) {
+                    const subject = `You’ve Been Assigned a New Task by the Project Manager`;
+                    const message = `Dear ${staff.Fname} ${staff.Lname},
+
+        You have been assigned a new task by ${manager?.Fname ?? '-'} ${manager?.Lname ?? ''} via SAT Portal System.
+
+        Task Details:
+        - Task Name: ${task.Name}
+        - Project: ${projectList[0].name}
+        - Start Date: ${task.Start_Date}
+        - End Date: ${task.End_Date}
+        - View Task: http://sats1.myddns.me:3030
+
+        Please log in to the system to review the task details and proceed accordingly.
+        If you have any questions, feel free to reach out directly to the Project Manager.
+
+        Best regards,  
+        SAT Solutions Co.,Ltd.
+                    `.trim();
+
+                    await mailSend(staff.mail, subject, message);
+                }
+            }
+        }
+
+        
         res = 'ok';
     }
     catch (err) {
@@ -340,8 +376,47 @@ module.exports.editTask = async (task) => {
     let res;
 
     try{
+
+        if (task.Staff_ID && task.Staff_ID >= 1 && task.pj_key && task.ID) {
+            const [staffList, projectList, oldTask] = await Promise.all([
+                db.ExecQuery(`SELECT * FROM satdb.ee_staffs`),
+                db.ExecQuery(`SELECT * FROM satdb.pj_projects WHERE pj_id='${task.pj_key}'`),
+                db.ExecQuery(`SELECT * FROM satdb.pj_tasks WHERE ID='${task.ID}'`),
+            ]);
+
+            if (staffList?.length && projectList?.length && oldTask?.length) {
+                const staff = staffList.find(s => s.ID == task.Staff_ID) ?? null;
+                const manager = staffList.find(s => s.ID == projectList[0].manager_id) ?? null;
+                const oldStaff = staffList.find(s => s.ID == oldTask[0].staff_id) ?? null
+                // console.log(oldStaff)
+                // console.log(staff)
+                if (staff?.mail && staff.mail != 'undefined' && staff.ID != oldStaff?.ID) {
+                    const subject = `You’ve Been Assigned a New Task by the Project Manager`;
+                    const message = [
+                    `Dear ${staff.Fname} ${staff.Lname},`,
+                    ``,
+                    `You have been assigned a new task by ${manager?.Fname ?? '-'} ${manager?.Lname ?? ''} via SAT Portal System.`,
+                    ``,
+                    `Task Details:`,
+                    `- Task Name : ${task.Name}`,
+                    `- Project   : ${projectList[0].name}`,
+                    `- Start Date: ${task.Start_Date}`,
+                    `- End Date  : ${task.End_Date}`,
+                    `- View Task : http://sats1.myddns.me:3030`,
+                    ``,
+                    `Please log in to the system to review the task details and proceed accordingly.`,
+                    `If you have any questions, feel free to reach out directly to the Project Manager.`,
+                    ``,
+                    `Best regards,`,
+                    `SAT Solutions Co.,Ltd.`
+                    ].join('\n');
+
+                    await mailSend(staff.mail, subject, message);
+                }
+            }
+        };
         const query = `UPDATE pj_tasks SET task='${task.Name}', start_date='${task.Start_Date}', end_date='${task.End_Date}', hour_expected='${task.Man_Hour}'
-                , staff_id='${task.Staff_ID}', remark='${task.Remark}', require_doc='${task.Require_Doc}', status='${task.Status}', parent=${chkNull(task.Parent)} WHERE ID='${task.ID}' AND pj_id='${task.pj_key}'`;
+        , staff_id='${task.Staff_ID}', remark='${task.Remark}', require_doc='${task.Require_Doc}', status='${task.Status}', parent=${chkNull(task.Parent)} WHERE ID='${task.ID}' AND pj_id='${task.pj_key}'`;
         await db.ExecQuery(query);
         res = 'ok';
     }

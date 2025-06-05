@@ -6,8 +6,8 @@ module.exports.mailSend = async (address, subject, text) => {
         port: 25,
         secure: false,
         auth: {
-            user: 'chinnaphat@sat-solutions.com',
-            pass: 'PP@@ssw0rd555'
+            user: 'system@sat-solutions.com',
+            pass: 'System123!'
         }
     });
 
