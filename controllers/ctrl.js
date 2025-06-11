@@ -116,6 +116,30 @@ module.exports.Tasks = async (req, res) => {
     }
 }
 
+module.exports.Tickets = async (req, res) => {
+    const token = req.headers["authorization"];
+    if (auth.ValidateToken(token)) {
+        const { mode, Data } = req.body;
+        let result;
+        if(mode === 'new'){
+            result = await data.createTicket(Data);
+        }
+        else if(mode === 'edit'){
+            result =  await data.updateTicket(Data);
+        }
+        else if(mode === 'getbystaff'){
+            result = await data.getTicketsByStaff(Data);
+        }
+        else if(mode === 'get'){
+            result = await data.getAllTickets();
+        }
+        res.status(200).json(result);
+    }
+    else{
+        res.status(errors.err[2].code).json(errors.err[2].msg);
+    }
+}
+
 module.exports.Timesheet = async (req,res) => {
     let result;
     const token = req.headers["authorization"];
@@ -437,6 +461,10 @@ module.exports.Info = async (req, res) => {
             if (mode === 'project') {
                 logger.debuglog('Get Project Require Info');
                 const result = await data.GetRequireInfo();
+                res.status(200).json(result);
+            } else if(mode === 'support'){
+                logger.debuglog('Get Support Require Info');
+                const result = await data.GetSupportInfo();
                 res.status(200).json(result);
             }
         }

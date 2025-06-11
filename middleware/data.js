@@ -326,23 +326,24 @@ module.exports.addTask = async (task) => {
 
                 if (staff?.mail) {
                     const subject = `You’ve Been Assigned a New Task by the Project Manager`;
-                    const message = `Dear ${staff.Fname} ${staff.Lname},
-
-        You have been assigned a new task by ${manager?.Fname ?? '-'} ${manager?.Lname ?? ''} via SAT Portal System.
-
-        Task Details:
-        - Task Name: ${task.Name}
-        - Project: ${projectList[0].name}
-        - Start Date: ${task.Start_Date}
-        - End Date: ${task.End_Date}
-        - View Task: http://sats1.myddns.me:3030
-
-        Please log in to the system to review the task details and proceed accordingly.
-        If you have any questions, feel free to reach out directly to the Project Manager.
-
-        Best regards,  
-        SAT Solutions Co.,Ltd.
-                    `.trim();
+                    const message = [
+                    `Dear ${staff.Fname} ${staff.Lname},`,
+                    ``,
+                    `You have been assigned a new task by ${manager?.Fname ?? '-'} ${manager?.Lname ?? ''} via SAT Portal System.`,
+                    ``,
+                    `Task Details:`,
+                    `- Task Name : ${task.Name}`,
+                    `- Project   : ${projectList[0].name}`,
+                    `- Start Date: ${task.Start_Date}`,
+                    `- End Date  : ${task.End_Date}`,
+                    `- View Task : http://sats1.myddns.me:3030`,
+                    ``,
+                    `Please log in to the system to review the task details and proceed accordingly.`,
+                    `If you have any questions, feel free to reach out directly to the Project Manager.`,
+                    ``,
+                    `Best regards,`,
+                    `SAT Solutions Co.,Ltd.`
+                    ].join('\n');
 
                     await mailSend(staff.mail, subject, message);
                 }
@@ -413,6 +414,29 @@ module.exports.editTask = async (task) => {
 
                     await mailSend(staff.mail, subject, message);
                 }
+
+                if (oldStaff?.mail && oldStaff.mail !== 'undefined' && oldStaff.ID !== staff.ID) {
+                    const subject = `Your Task Has Been Reassigned`;
+                    const message = [
+                        `Dear ${oldStaff.Fname} ${oldStaff.Lname},`,
+                        ``,
+                        `Please be informed that your previously assigned task has been reassigned to ${staff.Fname} ${staff.Lname} by ${manager?.Fname ?? '-'} ${manager?.Lname ?? ''} via SAT Portal System.`,
+                        ``,
+                        `Task Details:`,
+                        `- Task Name : ${task.Name}`,
+                        `- Project   : ${projectList[0].name}`,
+                        `- Start Date: ${task.Start_Date}`,
+                        `- End Date  : ${task.End_Date}`,
+                        ``,
+                        `You are no longer responsible for this task. If you believe this change is incorrect or have any concerns, please contact the Project Manager.`,
+                        ``,
+                        `Best regards,`,
+                        `SAT Solutions Co.,Ltd.`
+                    ].join('\n');
+
+                    await mailSend(oldStaff.mail, subject, message);
+                }
+
             }
         };
         const query = `UPDATE pj_tasks SET task='${task.Name}', start_date='${task.Start_Date}', end_date='${task.End_Date}', hour_expected='${task.Man_Hour}'
@@ -909,4 +933,233 @@ padding = (str, p) => {
     const res = pad.substring(0, pad.length - str.length) + str;
 
     return res;
+}
+
+module.exports.createTicket = async (item, user) => {
+    let res;
+    try{
+
+        const ticketKey = await generateSPID();
+        const query = `INSERT INTO srv_services (ticket, name,  pj_id,  po_no,  cm_id,  cnt_id,  cc_id,  status,  priority,  department,  staff_id,  start_date,  end_date,  source,  topic,  detail,  response,  remark ) VALUES
+        (
+            '${ ticketKey }', 
+            '${item.Name}', 
+            '${item.Pj_key}', 
+            '${item.Po}', 
+            '${item.Cm_id}', 
+            '${item.Cnt_id}', 
+            '${item.Cc_id}', 
+            '${item.Status}', 
+            '${item.Priority}', 
+            '${item.Department}', 
+            '${item.Staff_ID}', 
+            '${item.Start_Date}', 
+            '${item.End_Date}', 
+            '${item.Source}', 
+            '${item.Topic}', 
+            '${item.Detail}',
+            '${item.Response}',
+            '${item.Remark}'
+        )`;
+        await db.ExecQuery(query);
+        const [staffList] = await Promise.all([
+                db.ExecQuery(`SELECT * FROM satdb.ee_staffs`)
+        ]);
+        const staff = staffList.find(s => s.ID == item.Staff_ID) ?? null;
+        const manager = staffList.find(s => s.ID == item.user_id) ?? null;
+        if (staff?.mail) {
+            const subject = `You’ve Been Assigned a New Customer Support Ticket`;
+            const message = [
+                `Dear ${staff.Fname} ${staff.Lname},`,
+                ``,
+                `You have been assigned a new customer support ticket by ${manager?.Fname ?? '-'} ${manager?.Lname ?? ''} via SAT Portal System.`,
+                ``,
+                `Ticket Details:`,
+                `- Ticket No : ${ticketKey}`,
+                `- Title  : ${item.Name}`,
+                `- Subject   : ${item.Topic}`,
+                `- Start Date: ${item.Start_Date}`,
+                `- End Date  : ${item.End_Date}`,
+                `- View Ticket: http://sats1.myddns.me:3030`,
+                ``,
+                `Please log in to the system to review the ticket details and take appropriate action.`,
+                `If you have any questions, feel free to contact your supervisor or the support coordinator.`,
+                ``,
+                `Best regards,`,
+                `SAT Solutions Co.,Ltd.`
+                ].join('\n');
+            await mailSend(staff.mail, subject, message);
+        }
+        res = 'ok';
+    }
+    catch(err){
+        logger.loginfo(`Create ticket error : ${err}`);
+        res = 'error';
+    }
+    return res;
+}
+
+module.exports.updateTicket = async (item) => {
+    let res;
+    try{
+        if (item.Staff_ID && item.Staff_ID >= 1 && item.ID) {
+            const [staffList, oldTask] = await Promise.all([
+                db.ExecQuery(`SELECT * FROM satdb.ee_staffs`),
+                db.ExecQuery(`SELECT * FROM satdb.srv_services WHERE ID='${item.ID}'`),
+            ]);
+
+            if (staffList?.length && oldTask?.length) {
+                const staff = staffList.find(s => s.ID == item.Staff_ID) ?? null;
+                const manager = staffList.find(s => s.ID == item.user_id) ?? null;
+                const oldStaff = staffList.find(s => s.ID == oldTask[0].staff_id) ?? null
+                //console.log(oldStaff)
+                //console.log(staff)
+                if (staff?.mail && staff.mail != 'undefined' && staff.ID != oldStaff?.ID) {
+                    const subject = `You’ve Been Assigned a New Customer Support Ticket`;
+                    const message = [
+                        `Dear ${staff.Fname} ${staff.Lname},`,
+                        ``,
+                        `You have been assigned a new customer support ticket by ${manager?.Fname ?? '-'} ${manager?.Lname ?? ''} via SAT Portal System.`,
+                        ``,
+                        `Ticket Details:`,
+                        `- Ticket No : ${oldTask[0].ticket}`,
+                        `- Title  : ${item.Name}`,
+                        `- Subject   : ${item.Topic}`,
+                        `- Start Date: ${item.Start_Date}`,
+                        `- End Date  : ${item.End_Date}`,
+                        `- View Ticket: http://sats1.myddns.me:3030`,
+                        ``,
+                        `Please log in to the system to review the ticket details and take appropriate action.`,
+                        `If you have any questions, feel free to contact your supervisor or the support coordinator.`,
+                        ``,
+                        `Best regards,`,
+                        `SAT Solutions Co.,Ltd.`
+                        ].join('\n');
+                    await mailSend(staff.mail, subject, message);
+                }
+
+                if (oldStaff?.mail && oldStaff.mail !== 'undefined' && oldStaff.ID !== staff.ID) {
+                    const subject = `Your Customer Support Ticket Has Been Reassigned`;
+                    const message = [
+                        `Dear ${oldStaff.Fname} ${oldStaff.Lname},`,
+                        ``,
+                        `Please be informed that your previously assigned customer support ticket has been reassigned to ${staff.Fname} ${staff.Lname} by ${manager?.Fname ?? '-'} ${manager?.Lname ?? ''} via SAT Portal System.`,
+                        ``,
+                        `Ticket Details:`,
+                        `- Ticket No : ${oldTask[0].ticket}`,
+                        `- Title  : ${item.Name}`,
+                        `- Subject   : ${item.Topic}`,
+                        `- Start Date: ${item.Start_Date}`,
+                        `- End Date  : ${item.End_Date}`,
+                        ``,
+                        `You are no longer responsible for this task. If you believe this change is incorrect or have any concerns, please contact the Project Manager.`,
+                        ``,
+                        `Best regards,`,
+                        `SAT Solutions Co.,Ltd.`
+                    ].join('\n');
+
+                    await mailSend(oldStaff.mail, subject, message);
+                }
+
+            }
+        };
+        const querys = `UPDATE srv_services SET name='${item.Name}', 
+        po_no='${ item.Po }',  
+        cm_id='${ item.Cm_id }',  
+        cnt_id='${ item.Cnt_id }',  
+        cc_id='${ item.Cc_id }',  
+        status='${ item.Status }',  
+        priority='${ item.Priority }',  
+        department='${ item.Department }',  
+        staff_id='${ item.Staff_ID }',  
+        start_date='${ item.Start_Date }',  
+        end_date='${ item.End_Date }',  
+        finish_date=${ item.Finish_Date ? `'${item.Finish_Date}'` : 'NULL' },
+        source='${ item.Source }',  
+        topic='${ item.Topic }',  
+        detail='${ item.Detail }',  
+        response='${ item.Response }',  
+        remark='${ item.Remark }'
+        WHERE ID='${item.ID}'`;
+        await db.ExecQuery(querys);
+        res = 'ok';
+    }
+    catch(err){
+        logger.loginfo(`Update ticket error : ${err}`);
+        res = 'error';
+    }
+    return res;
+}
+
+module.exports.getAllTickets = async () => {
+    let res;
+    try{
+        const query = `SELECT * FROM vw_service_lists`
+        res = await db.ExecQuery(query);
+    }
+    catch(err){
+        logger.loginfo(`Get tickets error : ${err}`)
+        res = 'error';
+    }
+    return res;
+}
+
+module.exports.getTicketsByStaff = async (data) => {
+    let res;
+    try{
+        
+        if(data && data.Staff_id){
+            const staff = await db.ExecQuery(`SELECT * FROM satdb.ee_staffs WHERE ID='${ data.Staff_id }'`);
+            if(staff?.length){
+                const query = `SELECT * FROM vw_service_lists WHERE Staff = '${staff[0].Fname}'`
+                res = await db.ExecQuery(query);
+            }
+        }
+    }
+    catch(err){
+        logger.loginfo(`Get tickets error : ${err}`)
+        res = 'error';
+    }
+    return res;
+}
+
+module.exports.GetSupportInfo = async () => {
+    let res;
+    try {
+        let result = { Priority: [], Source: [], Topic: [], Department: [], Status: [], LogStatus: [] };
+
+        const [priority, source, topic, department, status, logstatus] = await Promise.all([
+            db.ExecQuery(`SELECT * FROM srv_priority`),
+            db.ExecQuery(`SELECT * FROM srv_source`),
+            db.ExecQuery(`SELECT * FROM srv_topic`),
+            db.ExecQuery(`SELECT * FROM ee_departments`),
+            db.ExecQuery(`SELECT * FROM srv_status`),
+            db.ExecQuery(`SELECT * FROM srv_srvlog_status`),
+        ])
+        result.Priority = priority;
+        result.Source = source;
+        result.Topic = topic;
+        result.Department = department;
+        result.Status = status;
+        result.LogStatus = logstatus;
+        res = result;
+    }
+    catch (err) {
+        logger.loginfo(`Get Project Info error : ${err}`);
+        res = 'error';
+    }
+    return res;
+}
+
+
+generateSPID = async () => {
+    const now = new Date();
+    let CYear = now.getFullYear().toString().substring(2, 4);
+    const yyyy = now.getFullYear();
+
+    const query = `SELECT count(*) AS cnt FROM srv_services WHERE YEAR(start_date)='${yyyy}'`;
+    let res = await db.ExecQuery(query);
+    res = padding(res[0].cnt + 1, '0000');
+
+    return `SP${CYear}${res}`;
 }
