@@ -12,7 +12,7 @@ module.exports.mailSend = async (address, subject, text) => {
     });
 
     const mailOption = {
-        from: 'portaladmin@sat-solutions.com',
+        from: 'system@sat-solutions.com',
         to: address,
         subject: subject,
         text: text
