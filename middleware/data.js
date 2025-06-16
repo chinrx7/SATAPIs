@@ -237,10 +237,74 @@ module.exports.NewProject = async (Project, Files) => {
 
         await db.ExecQuery(query);
 
+        const [staffList] = await Promise.all([
+            db.ExecQuery(`SELECT * FROM satdb.ee_staffs`)
+        ]);
+
+        if (staffList?.length) {
+            const manager = staffList.find(s => s.ID == Project.Mgm_id) ?? null;
+
+            if (manager?.mail) {
+                const subject = `You’ve Been Assigned as Project Manager`;
+                const message = [
+                `Dear ${manager?.Fname ?? '-'} ${manager?.Lname ?? ''},`,
+                ``,
+                `You have been assigned as the **Project Manager** for the project **"${Project.Name}"** via the SAT Portal System.`,
+                ``,
+                `Project Details:`,
+                `- Project IO : ${IO}`,
+                `- Project Name : ${Project.Name}`,
+                `- Start Date   : ${Project.Start_Date}`,
+                `- End Date     : ${Project.End_Date}`,
+                `- View Project : http://sats1.myddns.me:3030`,
+                ``,
+                `As the Project Manager, you are responsible for overseeing project execution, managing team members, ensuring timelines are met, and coordinating with all relevant stakeholders.`,
+                ``,
+                `Please log in to the system to begin managing your project.`,
+                ``,
+                `Best regards,`,
+                `SAT Solutions Co., Ltd.`
+                ].join('\n');
+
+                await mailSend(manager.mail, subject, message);
+            }
+        }
+
         if (Project.Teams.Staff.length > 0) {
             for await (const staff of Project.Teams.Staff) {
                 query = `INSERT INTO pj_project_staffs (pj_id, staff_id) VALUES ('${Project.Key}', '${staff}')`;
                 await db.ExecQuery(query);
+                if (staffList?.length) {
+                    const staffs = staffList.find(s => s.ID == staff) ?? null;
+                    const manager = staffList.find(s => s.ID == Project.Mgm_id) ?? null;
+
+                    if (staffs?.mail) {
+                        const subject = `You’ve Been Added to a Project Team`;
+                        const message = [
+                        `Dear ${staffs.Fname} ${staffs.Lname},`,
+                        ``,
+                        `You have been added as a team member to the project **"${Project.Name}"** by ${manager?.Fname ?? '-'} ${manager?.Lname ?? ''} via the SAT Portal System.`,
+                        ``,
+                        `Project Details:`,
+                        `- Project IO : ${IO}`,
+                        `- Project Name : ${Project.Name}`,
+                        `- Start Date   : ${Project.Start_Date}`,
+                        `- End Date     : ${Project.End_Date}`,
+                        `- Project Manager : ${manager?.Fname ?? '-'} ${manager?.Lname ?? ''}`,
+                        `- View Project : http://sats1.myddns.me:3030`,
+                        ``,
+                        `Please log in to the system to view full project details and your assigned responsibilities (if any).`,
+                        ``,
+                        `If you have any questions, please contact the Project Manager directly.`,
+                        ``,
+                        `Best regards,`,
+                        `SAT Solutions Co., Ltd.`
+                        ].join('\n');
+
+
+                        await mailSend(staffs.mail, subject, message);
+                    }
+                }
             }
         }
 
@@ -310,7 +374,7 @@ module.exports.addTask = async (task) => {
     let res;
     try {
         const query = `INSERT INTO pj_tasks (pj_id, task, start_date, end_date, hour_expected, staff_id, remark, require_doc, status, parent) VALUES
-        ('${task.pj_key}', '${task.Name}', '${task.Start_Date}', '${task.End_Date}', '${task.Man_Hour}', '${task.Staff_ID}', '${task.Remark}',
+        ('${task.pj_key}', '${task.Name}', ${task.Start_Date ? `'${task.Start_Date}'` : null}, ${task.End_Date ? `'${task.End_Date}'` : null}, '${task.Man_Hour}', '${task.Staff_ID}', '${task.Remark}',
         '${task.Require_Doc}', '${task.Status}', ${chkNull(task.Parent)})`;
         await db.ExecQuery(query);
 
@@ -360,6 +424,83 @@ module.exports.addTask = async (task) => {
 
     return res;
 }
+
+
+module.exports.copyTasksFromProject = async (data) => {
+    let res = 'ok';
+    const taskMap = new Map(); 
+
+    const sourcePjKey = data.source_pj;
+    const targetPjKey = data.target_pj;
+
+    try {
+        const oldTasks = await db.ExecQuery(`
+            SELECT * FROM pj_tasks 
+            WHERE pj_id = '${sourcePjKey}' 
+            ORDER BY ID ASC
+        `);
+
+        let remaining = [...oldTasks];
+        let insertedSomething = true;
+
+        while (remaining.length > 0 && insertedSomething) {
+            insertedSomething = false;
+            const stillPending = [];
+
+            for (const task of remaining) {
+                const parent = task.parent;
+                const hasParent = parent !== null;
+
+                if (!hasParent || taskMap.has(parent)) {
+                    const newParent = hasParent ? taskMap.get(parent) : null;
+
+                    const safeParent = (newParent !== undefined && newParent !== null) ? newParent : 'NULL';
+
+                    const insertQuery = `
+                        INSERT INTO pj_tasks 
+                        (pj_id, task, start_date, end_date, hour_expected, staff_id, remark, require_doc, status, parent)
+                        VALUES (
+                            '${targetPjKey}',
+                            '${task.task}',
+                            ${task.start_date ? `'${toMySQLDateTime(task.start_date)}'` : 'NULL'},
+                            ${task.end_date ? `'${toMySQLDateTime(task.end_date)}'` : 'NULL'},
+                            ${task.hour_expected ?? 'NULL'},
+                            ${ 0 },
+                            ${task.remark ? `'${task.remark}'` : 'NULL'},
+                            ${task.require_doc ? `'${task.require_doc}'` : 'NULL'},
+                            ${task.status ?? 'NULL'},
+                            ${safeParent}
+                        );
+                    `;
+
+                    const result = await db.ExecQuery(insertQuery);
+
+                    const newID = result.insertId || 0;
+                    taskMap.set(task.ID, newID);
+                    insertedSomething = true;
+                } else {
+                    stillPending.push(task);
+                }
+            }
+
+            remaining = stillPending;
+        }
+
+        return res;
+    } catch (err) {
+        logger.loginfo(`Copy Task error: ${err}`);
+        return 'error';
+    }
+};
+
+
+function toMySQLDateTime(isoDate) {
+    if (!isoDate) return null;
+    const date = new Date(isoDate);
+    const pad = (n) => (n < 10 ? '0' + n : n);
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
 
 chkNull = (obj) => {
     let res;
@@ -439,7 +580,7 @@ module.exports.editTask = async (task) => {
 
             }
         };
-        const query = `UPDATE pj_tasks SET task='${task.Name}', start_date='${task.Start_Date}', end_date='${task.End_Date}', hour_expected='${task.Man_Hour}'
+        const query = `UPDATE pj_tasks SET task='${task.Name}', start_date=${task.Start_Date ? `'${task.Start_Date}'` : null}, end_date=${task.End_Date ? `'${task.End_Date}'` : null}, hour_expected='${task.Man_Hour}'
         , staff_id='${task.Staff_ID}', remark='${task.Remark}', require_doc='${task.Require_Doc}', status='${task.Status}', parent=${chkNull(task.Parent)} WHERE ID='${task.ID}' AND pj_id='${task.pj_key}'`;
         await db.ExecQuery(query);
         res = 'ok';
@@ -523,11 +664,80 @@ module.exports.UpdateProject = async (Project) => {
     let res;
 
     try {
+
+        if (Project.Mgm_id && Project.Mgm_id >= 1 && Project.Key ) {
+            const [staffList, projectList] = await Promise.all([
+                db.ExecQuery(`SELECT * FROM satdb.ee_staffs`),
+                db.ExecQuery(`SELECT * FROM satdb.pj_projects WHERE pj_id='${Project.Key}'`)
+            ]);
+
+            if (staffList?.length && projectList?.length) {
+                const staff = staffList.find(s => s.ID == Project.Mgm_id) ?? null;
+                const manager = staffList.find(s => s.ID == Project.user_id) ?? null;
+                const oldStaff = staffList.find(s => s.ID == projectList[0].manager_id) ?? null
+                // console.log(oldStaff)
+                // console.log(staff)
+                if (staff?.mail && staff.mail != 'undefined' && staff.ID != oldStaff?.ID) {
+                    const subject = `You’ve Been Assigned as Project Manager`;
+                    const message = [
+                    `Dear ${staff?.Fname ?? '-'} ${staff?.Lname ?? ''},`,
+                    ``,
+                    `You have been assigned as the **Project Manager** for the project **"${Project.Name}"** via the SAT Portal System.`,
+                    ``,
+                    `Project Details:`,
+                    `- Project IO : ${projectList[0].io}`,
+                    `- Project Name : ${Project.Name}`,
+                    `- Start Date   : ${Project.Start_Date}`,
+                    `- End Date     : ${Project.End_Date}`,
+                    `- View Project : http://sats1.myddns.me:3030`,
+                    ``,
+                    `As the Project Manager, you are responsible for overseeing project execution, managing team members, ensuring timelines are met, and coordinating with all relevant stakeholders.`,
+                    ``,
+                    `Please log in to the system to begin managing your project.`,
+                    ``,
+                    `Best regards,`,
+                    `SAT Solutions Co., Ltd.`
+                    ].join('\n');
+
+                    await mailSend(staff.mail, subject, message);
+                }
+
+                if (oldStaff?.mail && oldStaff.mail !== 'undefined' && oldStaff.ID > 0 && oldStaff.ID !== staff.ID) {
+                    const subject = `You Are No Longer the Project Manager`;
+                    const message = [
+                        `Dear ${oldStaff.Fname} ${oldStaff.Lname},`,
+                        ``,
+                        `Please be informed that your previous role as **Project Manager** for the project **"${projectList[0].name}"** has been reassigned to ${manager.Fname} ${manager.Lname} by ${manager?.Fname ?? '-'} ${manager?.Lname ?? ''} via the SAT Portal System.`,
+                        ``,
+                        `Project Details:`,
+                        `- Project IO : ${projectList[0].io}`,
+                        `- Project Name : ${projectList[0].name}`,
+                        `- Start Date   : ${projectList[0].start_date}`,
+                        `- End Date     : ${projectList[0].end_date}`,
+                        `- View Project : http://sats1.myddns.me:3030`,
+                        ``,
+                        `If you believe this change was made in error or have any concerns, please contact your administrator or the new Project Manager.`,
+                        ``,
+                        `Best regards,`,
+                        `SAT Solutions Co., Ltd.`
+                    ].join('\n');
+
+                    await mailSend(oldStaff.mail, subject, message);
+                }
+
+            }
+        };
+
+
         let query = `UPDATE pj_projects SET name='${Project.Name}', type='${Project.Type}', cm_id='${Project.CM_ID}',
          start_date='${Project.Start_Date}', end_date='${Project.End_Date}', manager_id='${Project.Mgm_id}', warranty='${Project.Warranty}', 
          pay_term='${Project.Payment}', status='${Project.Status}', contact='${Project.Contact}', subtype='${Project.SubType}' WHERE pj_id='${Project.Key}'`;
 
         await db.ExecQuery(query);
+
+        const [staffList] = await Promise.all([
+            db.ExecQuery(`SELECT * FROM satdb.ee_staffs`)
+        ]);
 
         if (Project.Teams.Staff) {
             const staffs = Project.Teams.Staff;
@@ -538,11 +748,68 @@ module.exports.UpdateProject = async (Project) => {
                     case 'i':
                         query = `INSERT INTO pj_project_staffs (pj_id, staff_id) VALUES ('${Project.Key}', '${staff.ID}')`;
                         await db.ExecQuery(query);
+                        if (staffList?.length) {
+                            const stff = staffList.find(s => s.ID == staff.ID) ?? null;
+                            const manager = staffList.find(s => s.ID == Project.Mgm_id) ?? null;
+
+                            if (stff?.mail) {
+                                const subject = `You’ve Been Added to a Project Team`;
+                                const message = [
+                                `Dear ${stff.Fname} ${stff.Lname},`,
+                                ``,
+                                `You have been added as a team member to the project **"${Project.Name}"** by ${manager?.Fname ?? '-'} ${manager?.Lname ?? ''} via the SAT Portal System.`,
+                                ``,
+                                `Project Details:`,
+                                `- Project Name : ${Project.Name}`,
+                                `- Start Date   : ${Project.Start_Date}`,
+                                `- End Date     : ${Project.End_Date}`,
+                                `- Project Manager : ${manager?.Fname ?? '-'} ${manager?.Lname ?? ''}`,
+                                `- View Project : http://sats1.myddns.me:3030`,
+                                ``,
+                                `Please log in to the system to view full project details and your assigned responsibilities (if any).`,
+                                ``,
+                                `If you have any questions, please contact the Project Manager directly.`,
+                                ``,
+                                `Best regards,`,
+                                `SAT Solutions Co., Ltd.`
+                                ].join('\n');
+
+
+                                await mailSend(stff.mail, subject, message);
+                            }
+                        }
                         break;
                     case 'd':
                         query = `DELETE FROM pj_project_staffs WHERE pj_id='${Project.Key}' AND staff_id='${staff.ID}'`;
                         await db.ExecQuery(query);
+
+                        if (staffList?.length) {
+                            const removedStaff = staffList.find(s => s.ID == staff.ID) ?? null;
+                            const manager = staffList.find(s => s.ID == Project.Mgm_id) ?? null;
+
+                            if (removedStaff?.mail) {
+                                const subject = `You’ve Been Removed from a Project Team`;
+                                const message = [
+                                    `Dear ${removedStaff.Fname} ${removedStaff.Lname},`,
+                                    ``,
+                                    `This is to inform you that you have been **removed from the project team** of **"${Project.Name}"** by ${manager?.Fname ?? '-'} ${manager?.Lname ?? ''} via the SAT Portal System.`,
+                                    ``,
+                                    `Project Details:`,
+                                    `- Project Name : ${Project.Name}`,
+                                    `- Project Manager : ${manager?.Fname ?? '-'} ${manager?.Lname ?? ''}`,
+                                    `- View Projects : http://sats1.myddns.me:3030`,
+                                    ``,
+                                    `If you have any questions regarding this change, please contact the Project Manager directly.`,
+                                    ``,
+                                    `Best regards,`,
+                                    `SAT Solutions Co., Ltd.`
+                                ].join('\n');
+
+                                await mailSend(removedStaff.mail, subject, message);
+                            }
+                        }
                         break;
+
                 }
             }
         }

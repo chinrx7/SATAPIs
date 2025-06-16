@@ -109,6 +109,9 @@ module.exports.Tasks = async (req, res) => {
         else if(mode === 'delete'){
             result = await data.delTask(Data);
         }
+        else if(mode === 'copy'){
+            result = await data.copyTasksFromProject(Data);
+        }
         res.status(200).json(result);
     }
     else{
