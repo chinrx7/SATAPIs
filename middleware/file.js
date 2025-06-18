@@ -28,6 +28,9 @@ module.exports.SaveFiles = async (Options, File) => {
         case 'IN':
             Folder = 'Internal';
             break;
+        case 'SP':
+            Folder = 'Support';
+            break;
         default:
             let f = `SELECT t.type FROM pj_projects p JOIN pj_type t ON p.type = t.ID WHERE p.pj_id = '${Options.pj_id}'`;
             const fr = await db.ExecQuery(f);
@@ -104,13 +107,17 @@ module.exports.GetFile = async (fileInfo) => {
             Folder = 'Engineering';
             break;
         case 'PD':
-            Folder = 'Product'
+            Folder = 'Product';
             break;
         case 'MA':
-            Folder = 'MA'
+            Folder = 'MA';
             break;
         case 'IN':
-            Folder = 'Internal'
+            Folder = 'Internal';
+            break;
+        case 'SP':
+            Folder = 'Support';
+            break;
     }
 
     const filePath = `${config.FileServer.Path}${Folder}\\${fobj[0].IO}\\${fobj[0].type}\\${fobj[0].filename}`;
@@ -217,4 +224,68 @@ module.exports.saveQT = async (File, fName, Info) => {
         res = 'file existed'
     }
 
+}
+
+module.exports.saveSRV = async (File, fName, Info) => {
+    let res;
+    const uploadPath3 = `${config.FileServer.Path}Support\\${Info.srv_id}`;
+
+    if (!fs.existsSync(uploadPath3)) {
+        fs.mkdirSync(uploadPath3, { recursive: true });
+    }
+
+    const filePath = `${uploadPath3}\\${fName}`;
+    //console.log(filePath)
+    if (!fs.existsSync(filePath)) {
+        const promise = await new Promise((resolve, reject) => {
+            File.mv(filePath, (err) => {
+                if (err) return reject(err);
+                resolve();
+            });
+        }).then(() => true).catch(() => false);
+
+        res = promise ? 'file uploaded' : 'error';
+    } else {
+        res = 'file existed';
+    }
+
+    return res;
+}
+
+
+module.exports.delSRV = async (fileInfo) => {
+    let res;
+
+    const query = `SELECT filename, srv_id FROM srv_files WHERE ID=${fileInfo.ID}`
+    const fobj = await db.ExecQuery(query);
+
+    const filePath = `${config.FileServer.Path}Support\\${fobj[0].srv_id}\\${fobj[0].filename}`;
+    // console.log(filePath)
+    if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        res = 'File deleted'
+        const query = `DELETE FROM srv_files WHERE ID=${fileInfo.ID}`;
+        await db.ExecQuery(query);
+    }
+    else {
+        res = 'File not found';
+    }
+
+    return res;
+}
+
+module.exports.getSRV = async (fileInfo) => {
+    let res;
+    const query = `SELECT filename, srv_id FROM srv_files WHERE ID=${fileInfo.ID}`
+    const fobj = await db.ExecQuery(query);
+
+    const filePath = `${config.FileServer.Path}Support\\${fobj[0].srv_id}\\${fobj[0].filename}`;
+
+    if (fs.existsSync(filePath)) {
+        res = fs.readFileSync(filePath);
+    }
+    else {
+        res = 'File not found';
+    }
+    return res;
 }

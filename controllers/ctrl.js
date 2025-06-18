@@ -122,7 +122,15 @@ module.exports.Tasks = async (req, res) => {
 module.exports.Tickets = async (req, res) => {
     const token = req.headers["authorization"];
     if (auth.ValidateToken(token)) {
-        const { mode, Data } = req.body;
+        let request;
+        if (req.body.datas) {
+            request = JSON.parse(req.body.datas);
+        }
+        else {
+            request = req.body
+        }
+        //console.log(request)
+        const { mode, Data } = request;
         let result;
         if(mode === 'new'){
             result = await data.createTicket(Data);
@@ -136,11 +144,62 @@ module.exports.Tickets = async (req, res) => {
         else if(mode === 'get'){
             result = await data.getAllTickets();
         }
-        res.status(200).json(result);
+        else if(mode === 'document'){
+            result = await data.getTicketsDocument(Data);
+        }
+        else if(mode === 'upload'){
+            //console.log(req.files)
+            result = await data.uploadSupportFile(Data, req.files);
+        }
+        else if(mode === 'removefile'){
+            result = await fdata.delSRV(Data);
+        }
+        else if(mode === 'getfile'){
+            const filePath = `${config.FileServer.Path}${Data.folder}\\${Data.srv_id}\\${Data.filename}`;
+            //console.log(filePath)
+            if (fs.existsSync(filePath)) {
+                res.download(filePath, Data.filename);
+            }
+            else {
+                res.status(500).json('file not dound')
+            }
+        } else {
+            res.status(200).json("unknow");
+        }
+        if(result){
+            res.status(200).json(result);
+        }
     }
     else{
         res.status(errors.err[2].code).json(errors.err[2].msg);
     }
+}
+
+module.exports.TicketsTask = async (req, res) => {
+    const token = req.headers["authorization"];
+    if (auth.ValidateToken(token)) {
+        const { mode, Data } = req.body;
+        let result;
+        if(mode === 'new'){
+            result = await data.addSrvTask(Data);
+        }
+        else if(mode === 'edit'){
+            result =  await data.editSrvTask(Data);
+        }
+        else if(mode === 'get'){
+            result = await data.getSrvTask(Data);
+        }
+        else if(mode === 'getbystaff'){
+            result = await data.getSrvTaskByStaff(Data);
+        }
+        else if(mode === 'delete'){
+            result = await data.delSrvTask(Data);
+        }
+        res.status(200).json(result);
+    }
+    else{
+        res.status(errors.err[2].code).json(errors.err[2].msg);
+    }    
 }
 
 module.exports.Timesheet = async (req,res) => {

@@ -1207,7 +1207,7 @@ module.exports.createTicket = async (item, user) => {
     try{
 
         const ticketKey = await generateSPID();
-        const query = `INSERT INTO srv_services (ticket, name,  pj_id,  po_no,  cm_id,  cnt_id,  cc_id,  status,  priority,  department,  staff_id,  start_date,  end_date,  source,  topic,  detail,  response,  remark ) VALUES
+        const query = `INSERT INTO srv_services (ticket, name,  pj_id,  po_no,  cm_id,  cnt_id,  cc_id,  status,  priority,  department,  staff_id,  start_date,  end_date,  source,  topic,  detail,  response,  remark, require_document ) VALUES
         (
             '${ ticketKey }', 
             '${item.Name}', 
@@ -1227,6 +1227,7 @@ module.exports.createTicket = async (item, user) => {
             '${item.Detail}',
             '${item.Response}',
             '${item.Remark}'
+            '${item.Require_Doc ? item.Require_Doc : 0}'
         )`;
         await db.ExecQuery(query);
         const [staffList] = await Promise.all([
@@ -1346,7 +1347,8 @@ module.exports.updateTicket = async (item) => {
         topic='${ item.Topic }',  
         detail='${ item.Detail }',  
         response='${ item.Response }',  
-        remark='${ item.Remark }'
+        remark='${ item.Remark }',
+        require_document='${item.Require_Doc ? item.Require_Doc : 0}'
         WHERE ID='${item.ID}'`;
         await db.ExecQuery(querys);
         res = 'ok';
@@ -1371,15 +1373,70 @@ module.exports.getAllTickets = async () => {
     return res;
 }
 
+// module.exports.getTicketsByStaff = async (data) => {
+//     let res;
+//     try{
+        
+//         if(data && data.Staff_id){
+//             const staff = await db.ExecQuery(`SELECT * FROM satdb.ee_staffs WHERE ID='${ data.Staff_id }'`);
+//             if(staff?.length){
+//                 const query = `SELECT * FROM vw_service_lists WHERE Staff = '${staff[0].Fname}'`
+//                 res = await db.ExecQuery(query);
+//             }
+//         }
+//     }
+//     catch(err){
+//         logger.loginfo(`Get tickets error : ${err}`)
+//         res = 'error';
+//     }
+//     return res;
+// }
+
 module.exports.getTicketsByStaff = async (data) => {
+    let res = [];
+    try {
+        if (data && data.Staff_id) {
+            
+            const staff = await db.ExecQuery(`SELECT * FROM satdb.ee_staffs WHERE ID='${data.Staff_id}'`);
+            
+            if (staff?.length) {
+                const staffFname = staff[0].Fname;
+
+               
+                const serviceListQuery = `SELECT * FROM vw_service_lists;`;
+                const serviceList = await db.ExecQuery(serviceListQuery);
+
+                
+                const logQuery = `SELECT ticket_id FROM srv_srvlog WHERE staff_id = '${data.Staff_id}'`;
+                const logTickets = await db.ExecQuery(logQuery);
+                const logTicketIds = logTickets.map(t => t.ticket_id);
+
+               
+                const filteredServiceList = serviceList.filter(ticket => logTicketIds.includes(ticket.Ticket) || ticket.Staff == staffFname);
+
+               
+                res = [...filteredServiceList];
+            }
+        }
+    } catch (err) {
+        logger.loginfo(`Get tickets error : ${err}`);
+        res = 'error';
+    }
+    return res;
+};
+
+
+module.exports.getTicketsDocument = async (data) => {
     let res;
     try{
-        
-        if(data && data.Staff_id){
-            const staff = await db.ExecQuery(`SELECT * FROM satdb.ee_staffs WHERE ID='${ data.Staff_id }'`);
-            if(staff?.length){
-                const query = `SELECT * FROM vw_service_lists WHERE Staff = '${staff[0].Fname}'`
-                res = await db.ExecQuery(query);
+        //console.log(data)
+        if(data && data.Srv_id){
+            const result = await db.ExecQuery(`SELECT * FROM satdb.srv_files WHERE srv_id='${ data.Srv_id }'`);
+            //console.log(result)
+            if(result){
+                return result;
+            } else {
+                return [];
             }
         }
     }
@@ -1418,6 +1475,227 @@ module.exports.GetSupportInfo = async () => {
     return res;
 }
 
+module.exports.uploadSupportFile = async (Info, Files) => {
+    let res;
+    try {
+        //console.log(Files)
+        if (Array.isArray(Files.files) === true) {
+
+            for await (const f of Files.files) {
+                await fdata.saveSRV(f, f.name, Info);
+                const query = `INSERT INTO srv_files (srv_id, filename, docname, folder, description, type) VALUES  
+                    ('${Info.srv_id}', '${f.name}', '${f.name}', '${Info.folder}', '${Info.description}', '${Info.type}')`;
+                await db.ExecQuery(query);
+            }
+        }
+        else {
+            const f = Files.files;
+            await fdata.saveSRV(f, Info.filename, Info);
+            const query = `INSERT INTO srv_files (srv_id, filename, docname, folder, description, type) VALUES  
+                    ('${Info.srv_id}', '${Info.filename}', '${Info.filename}', '${Info.folder}', '${Info.description}', '${Info.type}')`;
+            await db.ExecQuery(query);
+        }
+
+        res = 'ok';
+    }
+    catch(err){
+        logger.loginfo(`Service upload file error : ${err}`);
+        res = 'error';
+    }
+    return res;
+}
+
+module.exports.addSrvTask = async (task) => {
+    let res;
+    try {
+        const query = `INSERT INTO srv_srvlog (ticket_id, task, start_date, end_date, status, staff_id, remark) VALUES
+        ( 
+            '${task.srv_key}', 
+            '${task.Name}', 
+            ${task.Start_Date ? `'${task.Start_Date}'` : null}, 
+            ${task.End_Date ? `'${task.End_Date}'` : null}, 
+            '${task.Status}', 
+            '${task.Staff_ID}', 
+            '${task.Remark}'
+        )`;
+        await db.ExecQuery(query);
+
+        if (task.Staff_ID && task.Staff_ID >= 1 && task.srv_key) {
+            const [staffList, projectList] = await Promise.all([
+                db.ExecQuery(`SELECT * FROM satdb.ee_staffs`),
+                db.ExecQuery(`SELECT * FROM satdb.srv_services WHERE ticket='${task.srv_key}'`)
+            ]);
+
+            if (staffList?.length && projectList?.length) {
+                const staff = staffList.find(s => s.ID == task.Staff_ID) ?? null;
+                const manager = staffList.find(s => s.ID == projectList[0].staff_id) ?? null;
+
+                if (staff?.mail) {
+                    const subject = `You’ve Been Assigned a New Support Task`;
+                    const message = [
+                        `Dear ${staff.Fname} ${staff.Lname},`,
+                        ``,
+                        `You have been assigned a new support task by ${manager?.Fname ?? '-'} ${manager?.Lname ?? ''} via SAT Portal System.`,
+                        ``,
+                        `Ticket Details:`,
+                        `- Ticket No : ${task.srv_key}`,
+                        `- Title  : ${projectList[0].name}`,
+                        `- Task   : ${task.Name}`,
+                        `- Start Date: ${task.Start_Date??'-'}`,
+                        `- End Date  : ${task.End_Date??'-'}`,
+                        `- View Ticket: http://sats1.myddns.me:3030`,
+                        ``,
+                        `Please log in to the system to review the ticket details and take appropriate action.`,
+                        `If you have any questions, feel free to contact your supervisor or the support coordinator.`,
+                        ``,
+                        `Best regards,`,
+                        `SAT Solutions Co.,Ltd.`
+                    ].join('\n');
+
+                    await mailSend(staff.mail, subject, message);
+                }
+            }
+        }
+
+        
+        res = 'ok';
+    }
+    catch (err) {
+        logger.loginfo(`Add ticket task error : ${err}`);
+        res = 'error';
+    }
+
+    return res;
+}
+
+module.exports.editSrvTask = async (task) => {
+    let res;
+    const Cdate = format(new Date(), 'yyyy-MM-dd HH:mm:ss');
+    try{
+
+        if (task.Staff_ID && task.Staff_ID >= 1 && task.srv_key && task.ID) {
+            const [staffList, projectList, oldTask] = await Promise.all([
+                db.ExecQuery(`SELECT * FROM satdb.ee_staffs`),
+                db.ExecQuery(`SELECT * FROM satdb.srv_services WHERE ticket='${task.srv_key}'`),
+                db.ExecQuery(`SELECT * FROM satdb.srv_srvlog WHERE ID='${task.ID}'`),
+            ]);
+
+            if (staffList?.length && projectList?.length && oldTask?.length) {
+                const staff = staffList.find(s => s.ID == task.Staff_ID) ?? null;
+                const manager = staffList.find(s => s.ID == projectList[0].staff_id) ?? null;
+                const oldStaff = staffList.find(s => s.ID == oldTask[0].staff_id) ?? null
+                // console.log(oldStaff)
+                // console.log(staff)
+                if (staff?.mail && staff.mail != 'undefined' && staff.ID != oldStaff?.ID) {
+                    const subject = `You’ve Been Assigned a New Support Task`;
+                    const message = [
+                        `Dear ${staff.Fname} ${staff.Lname},`,
+                        ``,
+                        `You have been assigned a new support task by ${manager?.Fname ?? '-'} ${manager?.Lname ?? ''} via SAT Portal System.`,
+                        ``,
+                        `Ticket Details:`,
+                        `- Ticket No : ${task.srv_key}`,
+                        `- Title  : ${projectList[0].name}`,
+                        `- Task   : ${task.Name}`,
+                        `- Start Date: ${task.Start_Date??'-'}`,
+                        `- End Date  : ${task.End_Date??'-'}`,
+                        `- View Ticket: http://sats1.myddns.me:3030`,
+                        ``,
+                        `Please log in to the system to review the ticket details and take appropriate action.`,
+                        `If you have any questions, feel free to contact your supervisor or the support coordinator.`,
+                        ``,
+                        `Best regards,`,
+                        `SAT Solutions Co.,Ltd.`
+                    ].join('\n');
+
+                    await mailSend(staff.mail, subject, message);
+                }
+
+                if (oldStaff?.mail && oldStaff.mail !== 'undefined' && oldStaff.ID !== staff.ID) {
+                    const subject = `Your Support Task Has Been Reassigned`;
+                    const message = [
+                        `Dear ${oldStaff.Fname} ${oldStaff.Lname},`,
+                        ``,
+                        `Please be informed that your previously assigned support task has been reassigned to ${staff.Fname} ${staff.Lname} by ${manager?.Fname ?? '-'} ${manager?.Lname ?? ''} via SAT Portal System.`,
+                        ``,
+                        `Ticket Details:`,
+                        `- Ticket No : ${task.srv_key}`,
+                        `- Title     : ${projectList[0].name}`,
+                        `- Task      : ${task.Name}`,
+                        `- Start Date: ${task.Start_Date ?? '-'}`,
+                        `- End Date  : ${task.End_Date ?? '-'}`,
+                        `- View Ticket: http://sats1.myddns.me:3030`,
+                        ``,
+                        `You are no longer responsible for this task.`,
+                        `If you believe this change was made in error or have any questions, please contact your supervisor or the support coordinator.`,
+                        ``,
+                        `Best regards,`,
+                        `SAT Solutions Co.,Ltd.`
+                    ].join('\n');
+
+                    await mailSend(oldStaff.mail, subject, message);
+                }
+            }
+        };
+
+        const query = `UPDATE srv_srvlog SET 
+            task='${task.Name}', 
+            start_date=${task.Start_Date ? `'${task.Start_Date}'` : null}, 
+            end_date=${task.End_Date ? `'${task.End_Date}'` : null}, 
+            staff_id='${task.Staff_ID}', 
+            remark='${task.Remark}', 
+            status='${task.Status}',
+            update_time='${Cdate}'
+        WHERE ID='${task.ID}'`;
+        await db.ExecQuery(query);
+        res = 'ok';
+    }
+    catch(err){
+        logger.loginfo(`Edit task error : ${err}`);
+        res = 'error';
+    }
+    return res;
+}
+
+module.exports.getSrvTask = async (task) => {
+    let res;
+    try{
+        const query = `SELECT * FROM srv_srvlog WHERE ticket_id='${task.srv_key}'`
+        res = await db.ExecQuery(query);
+    }
+    catch(err){
+        logger.loginfo(`Get ticket tasks error : ${err}`)
+        res = 'error';
+    }
+    return res;
+}
+
+module.exports.getSrvTaskByStaff = async (task) => {
+    let res;
+    try{
+        const query = `SELECT * FROM srv_srvlog WHERE staff_id='${task.staff_id}'`
+        res = await db.ExecQuery(query);
+    }
+    catch(err){
+        logger.loginfo(`Get ticket tasks error : ${err}`)
+        res = 'error';
+    }
+    return res;
+}
+
+module.exports.delSrvTask = async (task) => {
+    let res;
+    try{
+        const query  = `DELETE FROM srv_srvlog WHERE ID='${task.ID}'`;
+        await db.ExecQuery(query);
+        res = 'ok';
+    }
+    catch(err){
+        logger.loginfo(`Delete ticket task error : ${err}`);
+        res = 'error';
+    }
+    return res;
+}
 
 generateSPID = async () => {
     const now = new Date();

@@ -29,6 +29,7 @@ router.post('/quotation', ctrl.Quotation);
 router.post('/timesheet', ctrl.Timesheet);
 router.post('/task', ctrl.Tasks);
 router.post('/ticket', ctrl.Tickets);
+router.post('/tickettask', ctrl.TicketsTask);
 router.post('/pcategory', ctrl.pCategory);
 
 router.post('/eventlog', ctrl.eventlog);
