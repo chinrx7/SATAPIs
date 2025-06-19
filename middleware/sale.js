@@ -2,6 +2,7 @@ const db = require('./mysql');
 const logger = require('./log');
 const { format } = require('date-fns');
 const fdata = require('./file');
+const iconv = require('iconv-lite');
 
 module.exports.CreateQT = async (Data, Files) => {
     let res;
@@ -48,15 +49,19 @@ module.exports.uploadFile = async (Info, Files) => {
 
         if (Array.isArray(Files.file) === true) {
             for await (const f of Files.file) {
-                fdata.saveQT(f, f.name, Info);
-                const query = `INSERT INTO sl_qt_files (qt_no, rev, filename) VALUES  ('${Info.no}', '${Info.rev}', '${f.name}')`;
+                const decodedName = iconv.decode(Buffer.from(f.name, 'latin1'), 'utf8');
+                //console.log(decodedName)
+                fdata.saveQT(f, decodedName, Info);
+                const query = `INSERT INTO sl_qt_files (qt_no, rev, filename) VALUES  ('${Info.no}', '${Info.rev}', '${decodedName}')`;
                 await db.ExecQuery(query);
             }
         }
         else {
             const f = Files.file;
-            fdata.saveQT(f, f.name, Info);
-            const query = `INSERT INTO sl_qt_files (qt_no, rev, filename) VALUES  ('${Info.no}', '${Info.rev}', '${f.name}')`;
+            const decodedName = iconv.decode(Buffer.from(f.name, 'latin1'), 'utf8');
+            //console.log(decodedName)
+            fdata.saveQT(f, decodedName, Info);
+            const query = `INSERT INTO sl_qt_files (qt_no, rev, filename) VALUES  ('${Info.no}', '${Info.rev}', '${decodedName}')`;
             await db.ExecQuery(query);
         }
 

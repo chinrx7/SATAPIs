@@ -170,11 +170,11 @@ module.exports.delQT = async (Info) => {
     let res;
     const cYear = new Date(Info.qt_date).getFullYear();
     const uploadPath = `${config.FileServer.Path}Quotation\\${cYear}\\${Info.no}\\${Info.rev}\\${Info.filename}`;
-
+    const query = `DELETE FROM sl_qt_files WHERE qt_no='${Info.no}' AND rev='${Info.rev}' AND filename='${Info.filename}'`;
+    await db.ExecQuery(query);
+    
     if(fs.existsSync(uploadPath)){
         fs.unlinkSync(uploadPath);
-        const query = `DELETE FROM sl_qt_files WHERE qt_no='${Info.no}' AND rev='${Info.rev}' AND filename='${Info.filename}'`;
-        await db.ExecQuery(query);
         res = 'file deleted'
     }
     else{
