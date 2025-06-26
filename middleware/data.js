@@ -32,7 +32,7 @@ module.exports.NewCustomer = async (Customer) => {
 
 module.exports.UpdateCustomer = async (C) => {
     let query = `UPDATE cm_customers SET name_th='${C.name_th}', address_th='${C.address_th}', branch_th='${C.branch_th}', name_eng='${C.name_eng}', address_th='${C.address_eng}', branch_th='${C.branch_eng}',
-     taxid='${C.taxid}', bill_condition='${C.bill_con}', credit_term='${C.credit_term}' WHERE cm_id='${C.cm_id}'`;
+     taxid='${C.taxid}', bill_condition='${C.bill_con}', credit_term='${C.credit_term}', doc_no='${C.doc_no}' WHERE cm_id='${C.cm_id}'`;
     await db.ExecQuery(query);
 
     if (C.phones) {
@@ -1055,13 +1055,13 @@ module.exports.createDO = async (D) => {
 
     try {
         let query = `INSERT INTO pj_do (do_no, pj_id, cm_id, c_id, cm_phone, customer_ref, remark, create_date, ee_id, ship_id) VALUES 
-    ('${do_no}', '${D.pj_id}', '${D.cm_id}', '${D.c_id}', '${D.cm_phone}','${D.c_ref}', '${D.remark}', '${Cdate}', '${D.staff}', '${D.ship_id}')`;
+    ('${D.do_no ? D.do_no : do_no}', '${D.pj_id}', '${D.cm_id}', '${D.c_id}', '${D.cm_phone}','${D.c_ref}', '${D.remark}', '${Cdate}', '${D.staff}', '${D.ship_id}')`;
 
         await db.ExecQuery(query);
 
         for await (const p of D.product) {
             query = `INSERT INTO pj_do_products (do_no, pd_id, sn, quantity, warranty) VALUES (
-            '${do_no}', '${p.pd_id}','${p.sn}', '${p.quantity}', '${p.warranty ? p.warranty : 0}')`;
+            '${D.do_no ? D.do_no : do_no}', '${p.pd_id}','${p.sn}', '${p.quantity}', '${p.warranty ? p.warranty : 0}')`;
             await db.ExecQuery(query);
         }
 
@@ -1226,7 +1226,7 @@ module.exports.createTicket = async (item, user) => {
             '${item.Topic}', 
             '${item.Detail}',
             '${item.Response}',
-            '${item.Remark}'
+            '${item.Remark}',
             '${item.Require_Doc ? item.Require_Doc : 0}'
         )`;
         await db.ExecQuery(query);
@@ -1333,6 +1333,7 @@ module.exports.updateTicket = async (item) => {
         };
         const querys = `UPDATE srv_services SET name='${item.Name}', 
         po_no='${ item.Po }',  
+        pj_id='${ item.Pj_key }', 
         cm_id='${ item.Cm_id }',  
         cnt_id='${ item.Cnt_id }',  
         cc_id='${ item.Cc_id }',  

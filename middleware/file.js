@@ -172,14 +172,18 @@ module.exports.delQT = async (Info) => {
     const uploadPath = `${config.FileServer.Path}Quotation\\${cYear}\\${Info.no}\\${Info.rev}\\${Info.filename}`;
     const query = `DELETE FROM sl_qt_files WHERE qt_no='${Info.no}' AND rev='${Info.rev}' AND filename='${Info.filename}'`;
     await db.ExecQuery(query);
-    
-    if(fs.existsSync(uploadPath)){
+
+    console.log(uploadPath)
+
+    if (fs.existsSync(uploadPath)) {
         fs.unlinkSync(uploadPath);
-        res = 'file deleted'
+        res = 'File deleted'
     }
-    else{
-        res = 'file not found';
+    else {
+        res = 'File not found';
     }
+
+    return res;
 
 }
 

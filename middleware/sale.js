@@ -50,7 +50,7 @@ module.exports.uploadFile = async (Info, Files) => {
         if (Array.isArray(Files.file) === true) {
             for await (const f of Files.file) {
                 const decodedName = iconv.decode(Buffer.from(f.name, 'latin1'), 'utf8');
-                //console.log(decodedName)
+                console.log(decodedName)
                 fdata.saveQT(f, decodedName, Info);
                 const query = `INSERT INTO sl_qt_files (qt_no, rev, filename) VALUES  ('${Info.no}', '${Info.rev}', '${decodedName}')`;
                 await db.ExecQuery(query);
@@ -59,7 +59,7 @@ module.exports.uploadFile = async (Info, Files) => {
         else {
             const f = Files.file;
             const decodedName = iconv.decode(Buffer.from(f.name, 'latin1'), 'utf8');
-            //console.log(decodedName)
+            console.log(decodedName)
             fdata.saveQT(f, decodedName, Info);
             const query = `INSERT INTO sl_qt_files (qt_no, rev, filename) VALUES  ('${Info.no}', '${Info.rev}', '${decodedName}')`;
             await db.ExecQuery(query);
