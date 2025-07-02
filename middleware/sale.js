@@ -20,16 +20,18 @@ module.exports.CreateQT = async (Data, Files) => {
         if (Array.isArray(Files.file) === true) {
 
             for await (const f of Files.file) {
-                query = `INSERT INTO sl_qt_files (qt_no, rev, filename) VALUES ('${Data.no}','${Data.rev}','${f.name}')`
-                fdata.saveQT(f, f.name, Data);
+                const decodedName = iconv.decode(Buffer.from(f.name, 'latin1'), 'utf8');
+                query = `INSERT INTO sl_qt_files (qt_no, rev, filename) VALUES ('${Data.no}','${Data.rev}','${decodedName}')`
+                fdata.saveQT(f, decodedName, Data);
 
                 await db.ExecQuery(query);
             }
         }
         else{
             const f  = Files.file;
-            query = `INSERT INTO sl_qt_files (qt_no, rev, filename) VALUES ('${Data.no}','${Data.rev}','${f.name}')`
-            fdata.saveQT(f, f.name, Data);
+            const decodedName = iconv.decode(Buffer.from(f.name, 'latin1'), 'utf8');
+            query = `INSERT INTO sl_qt_files (qt_no, rev, filename) VALUES ('${Data.no}','${Data.rev}','${decodedName}')`;
+            fdata.saveQT(f, decodedName, Data);
 
             await db.ExecQuery(query);
         }
@@ -50,7 +52,7 @@ module.exports.uploadFile = async (Info, Files) => {
         if (Array.isArray(Files.file) === true) {
             for await (const f of Files.file) {
                 const decodedName = iconv.decode(Buffer.from(f.name, 'latin1'), 'utf8');
-                console.log(decodedName)
+                //console.log(decodedName)
                 fdata.saveQT(f, decodedName, Info);
                 const query = `INSERT INTO sl_qt_files (qt_no, rev, filename) VALUES  ('${Info.no}', '${Info.rev}', '${decodedName}')`;
                 await db.ExecQuery(query);
@@ -59,7 +61,7 @@ module.exports.uploadFile = async (Info, Files) => {
         else {
             const f = Files.file;
             const decodedName = iconv.decode(Buffer.from(f.name, 'latin1'), 'utf8');
-            console.log(decodedName)
+            //console.log(decodedName)
             fdata.saveQT(f, decodedName, Info);
             const query = `INSERT INTO sl_qt_files (qt_no, rev, filename) VALUES  ('${Info.no}', '${Info.rev}', '${decodedName}')`;
             await db.ExecQuery(query);
@@ -84,10 +86,10 @@ module.exports.getQT = async (Option) => {
     qYear = Cdate.getFullYear();
 
     if(view === 'm'){
-        query = `SELECT * FROM vw_qt WHERE MONTH(create_date)='${qMonth}' AND YEAR(create_date)='${qYear}'`;
+        query = `SELECT * FROM vw_qt WHERE MONTH(qt_date)='${qMonth}' AND YEAR(qt_date)='${qYear}'`;
     }
     else if(view === 'y'){
-        query = `SELECT * FROM vw_qt WHERE YEAR(create_date)='${qYear}'`;
+        query = `SELECT * FROM vw_qt WHERE YEAR(qt_date)='${qYear}'`;
     }
 
     const qt = await db.ExecQuery(query);
