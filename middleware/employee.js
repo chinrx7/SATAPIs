@@ -5,8 +5,8 @@ const { format } = require('date-fns');
 module.exports.newTimeSheet = async (T) => {
     let res, query;
 
-    query = `INSERT INTO ee_timesheet (ee_id, taskname, pj_taskid, status, progress, start_time, end_time, detail, remark)
-    VALUES ('${T.user_id}','${T.taskname}',${T.pj_taskid},'${T.status}','${T.progress}','${T.start_time}','${T.end_time}','${T.detail}','${T.remark}')`;
+    query = `INSERT INTO ee_timesheet (ee_id, taskname, pj_taskid, status, progress, start_time, end_time, detail, remark, pj_id)
+    VALUES ('${T.user_id}','${T.taskname}',${T.pj_taskid},'${T.status}','${T.progress}','${T.start_time}','${T.end_time}','${T.detail}','${T.remark}','${T.pj_id ? T.pj_id : null}')`;
 
     let updateQuery = `UPDATE pj_tasks 
     SET status = '${T.status}', finish_date = '${T.end_time}' 
@@ -29,7 +29,7 @@ module.exports.updateTimeSheet = async (T) => {
     let res;
     const Cdate = format(new Date(), 'yyyy-MM-dd HH:mm:ss');
     const query = `UPDATE ee_timesheet SET ee_id=${T.user_id}, taskname='${T.taskname}', pj_taskid='${T.pj_taskid}', status=${T.status}, progress='${T.progress}'
-    , start_time='${T.start_time}', end_time='${T.end_time}', update_time='${Cdate}', detail='${T.detail}', remark='${T.remark}' WHERE ID='${T.ID}'`;
+    , start_time='${T.start_time}', end_time='${T.end_time}', update_time='${Cdate}', detail='${T.detail}', remark='${T.remark}', pj_id='${T.pj_id}' WHERE ID='${T.ID}'`;
 
     let updateQuery = `UPDATE pj_tasks 
     SET status = '${T.status}', finish_date = '${T.end_time}' 

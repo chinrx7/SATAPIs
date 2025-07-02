@@ -36,6 +36,9 @@ module.exports.Authen = async (req, res) => {
     //notice.mailSend();
     logger.debuglog('User authen');
     if (req.body) {
+        const user = req.headers["usxid"];
+        let logData = { module: 'Authentication', action: 'login', staff: user || 0 };
+        await logger.DBlog(logData);
         const { User, Password } = req.body;
         const result = await auth.Authen(User, Password);
         res.status(200).json(result);
@@ -68,6 +71,8 @@ module.exports.importCustomer = async (req,res)=>{
 
 module.exports.pCategory = async (req, res) => {
     const token = req.headers["authorization"];
+    const user = req.headers["usxid"];
+    let logData = { module: 'Category', action: '', staff: user || 0 };
     if (auth.ValidateToken(token)) {
         let result;
         const { mode, Data } = req.body;
@@ -76,12 +81,18 @@ module.exports.pCategory = async (req, res) => {
                 result = await masterd.getProjectCategory();
             break;
             case 'new':
+                logData.action = `add new project category : ${Data.Subtype}`;
+                await logger.DBlog(logData);
                 result = await masterd.addSubCategory(Data);
             break;
             case 'edit':
+                logData.action = `update project category : ${Data.Subtype}`;
+                await logger.DBlog(logData);
                 result = await masterd.editSubCategory(Data);
             break;
             case 'delete':
+                logData.action = `delete project category : ${Data.ID}`;
+                await logger.DBlog(logData);
                 result = await masterd.delSubCategory(Data);
             break;
         }
@@ -94,22 +105,32 @@ module.exports.pCategory = async (req, res) => {
 
 module.exports.Tasks = async (req, res) => {
     const token = req.headers["authorization"];
+    const user = req.headers["usxid"];
+    let logData = { module: 'Tasks', action: '', staff: user || 0 };
     if (auth.ValidateToken(token)) {
         const { mode, Data } = req.body;
         let result;
         if(mode === 'new'){
+            logData.action = `add new task : ${Data.Name}`;
+            await logger.DBlog(logData);
             result = await data.addTask(Data);
         }
         else if(mode === 'edit'){
+            logData.action = `update task : ${Data.Name}`;
+            await logger.DBlog(logData);
             result =  await data.editTask(Data);
         }
         else if(mode === 'get'){
             result = await data.getTask(Data);
         }
         else if(mode === 'delete'){
+            logData.action = `delete task : ${Data.ID}`;
+            await logger.DBlog(logData);
             result = await data.delTask(Data);
         }
         else if(mode === 'copy'){
+            logData.action = `copy task from project : ${Data.source_pj} to ${Data.target_pj}`;
+            await logger.DBlog(logData);
             result = await data.copyTasksFromProject(Data);
         }
         res.status(200).json(result);
@@ -121,6 +142,8 @@ module.exports.Tasks = async (req, res) => {
 
 module.exports.Tickets = async (req, res) => {
     const token = req.headers["authorization"];
+    const user = req.headers["usxid"];
+    let logData = { module: 'Tickets', action: '', staff: user || 0 };
     if (auth.ValidateToken(token)) {
         let request;
         if (req.body.datas) {
@@ -133,9 +156,13 @@ module.exports.Tickets = async (req, res) => {
         const { mode, Data } = request;
         let result;
         if(mode === 'new'){
+            logData.action = `add new ticket : ${Data.Name}`;
+            await logger.DBlog(logData);
             result = await data.createTicket(Data);
         }
         else if(mode === 'edit'){
+            logData.action = `update ticket : ${Data.Name}`;
+            await logger.DBlog(logData);
             result =  await data.updateTicket(Data);
         }
         else if(mode === 'getbystaff'){
@@ -149,9 +176,13 @@ module.exports.Tickets = async (req, res) => {
         }
         else if(mode === 'upload'){
             //console.log(req.files)
+            logData.action = `upload ticket document : ${Data.srv_id}`;
+            await logger.DBlog(logData);
             result = await data.uploadSupportFile(Data, req.files);
         }
         else if(mode === 'removefile'){
+            logData.action = `delete ticket document : ${Data.ID}`;
+            await logger.DBlog(logData);
             result = await fdata.delSRV(Data);
         }
         else if(mode === 'getfile'){
@@ -177,13 +208,19 @@ module.exports.Tickets = async (req, res) => {
 
 module.exports.TicketsTask = async (req, res) => {
     const token = req.headers["authorization"];
+    const user = req.headers["usxid"];
+    let logData = { module: 'TicketTask', action: '', staff: user || 0 };
     if (auth.ValidateToken(token)) {
         const { mode, Data } = req.body;
         let result;
         if(mode === 'new'){
+            logData.action = `add new task ${Data.Name} for ticket : ${Data.srv_key}`;
+            await logger.DBlog(logData);
             result = await data.addSrvTask(Data);
         }
         else if(mode === 'edit'){
+            logData.action = `update task ${Data.Name} for ticket : ${Data.ID}`;
+            await logger.DBlog(logData);
             result =  await data.editSrvTask(Data);
         }
         else if(mode === 'get'){
@@ -193,6 +230,8 @@ module.exports.TicketsTask = async (req, res) => {
             result = await data.getSrvTaskByStaff(Data);
         }
         else if(mode === 'delete'){
+            logData.action = `delete ticket task : ${Data.ID}`;
+            await logger.DBlog(logData);
             result = await data.delSrvTask(Data);
         }
         res.status(200).json(result);
@@ -205,19 +244,31 @@ module.exports.TicketsTask = async (req, res) => {
 module.exports.Timesheet = async (req,res) => {
     let result;
     const token = req.headers["authorization"];
+    const user = req.headers["usxid"];
+    let logData = { module: 'TimeSheet', action: '', staff: user || 0 };
     if (auth.ValidateToken(token)) {
         const { mode, Data } = req.body;
         if(mode === 'new'){
+            logData.action = `add new task : ${Data.taskname}`;
+            await logger.DBlog(logData);
             result = await ee.newTimeSheet(Data);
         }
         else if(mode === 'update'){
+            logData.action = `update task : ${Data.taskname}`;
+            await logger.DBlog(logData);
             result = await ee.updateTimeSheet(Data);
         }
         else if(mode === 'get'){
+            logData.action = `get task list`;
+            await logger.DBlog(logData);
             result = await ee.getTimesheet(Data);
         }
         else if(mode === 'get_pjtask'){
+            logData.action = `get project task`;
+            await logger.DBlog(logData);
             result = await ee.getPJtask(Data);
+        } else {
+            
         }
 
         if(result){
@@ -231,6 +282,8 @@ module.exports.Timesheet = async (req,res) => {
 
 module.exports.Quotation = async (req, res) => {
     const token = req.headers["authorization"];
+    const user = req.headers["usxid"];
+    let logData = { module: 'Quotation', action: '', staff: user || 0 };
     if (auth.ValidateToken(token)) {
         let request;
         if (req.body.datas) {
@@ -242,18 +295,26 @@ module.exports.Quotation = async (req, res) => {
         const { mode, Data } = request;
         let result;
         if (mode === 'new') {
+            logData.action = `add new quotation : ${Data.no} ${Data.rev}`;
+            await logger.DBlog(logData);
             result = await sale.CreateQT(Data, req.files);
         }
         else if(mode === 'get'){
             result = await sale.getQT(Data);
         }
         else if(mode === 'update'){
+            logData.action = `update quotation ${Data.ID} status : ${Data.status}`;
+            await logger.DBlog(logData);
             result = await sale.updateQT(Data);
         }
         else if(mode === 'upload'){
+            logData.action = `upload quotation ${Data.no} ${Data.rev} document`;
+            await logger.DBlog(logData);
             result = await sale.uploadFile(Data, req.files);
         }
         else if(mode === 'removefile'){
+            logData.action = `delete quotation ${Data.no} ${Data.rev} document : ${Data.filename}`;
+            await logger.DBlog(logData);
             result = await fdata.delQT(Data);
         }
         else if(mode === 'getfile'){
@@ -280,7 +341,8 @@ module.exports.Quotation = async (req, res) => {
 module.exports.Customer = async (req, res) => {
 
     const token = req.headers["authorization"];
-
+    const user = req.headers["usxid"];
+    let logData = { module: 'Customer', action: '', staff: user || 0 };
     if (auth.ValidateToken(token)) {
         if (req.body) {
             const { mode, Data } = req.body;
@@ -360,6 +422,8 @@ module.exports.Customer = async (req, res) => {
 
 module.exports.Contact = async (req, res) => {
     const token = req.headers["authorization"];
+    const user = req.headers["usxid"];
+    let logData = { module: 'Contact', action: '', staff: user || 0 };
     let result;
     if (auth.ValidateToken(token)) {
         if (req.body) {
@@ -398,6 +462,8 @@ module.exports.Contact = async (req, res) => {
 module.exports.Project = async (req, res) => {
 
     const token = req.headers["authorization"];
+    const user = req.headers["usxid"];
+    let logData = { module: 'Project', action: '', staff: user || 0 };
     if (auth.ValidateToken(token)) {
         if (req.body) {
             let request;
@@ -449,6 +515,8 @@ replaceJsonNull = (Json) => {
 
 module.exports.DO = async (req, res) => {
     const token = req.headers["authorization"];
+    const user = req.headers["usxid"];
+    let logData = { module: 'Delivery', action: '', staff: user || 0 };
     if (auth.ValidateToken(token)) {
         if (req.body) {
 
@@ -546,7 +614,8 @@ module.exports.SaveFiles = async (req, res) => {
     logger.debuglog('Upload file')
 
     const token = req.headers["authorization"];
-
+    const user = req.headers["usxid"];
+    let logData = { module: 'File', action: '', staff: user || 0 };
     if (auth.ValidateToken(token)) {
 
         const datas = JSON.parse(req.body.data)
@@ -577,6 +646,8 @@ module.exports.SaveFiles = async (req, res) => {
 module.exports.getFile = async (req, res) => {
     logger.debuglog('Get file');
     const token = req.headers["authorization"];
+    const user = req.headers["usxid"];
+    let logData = { module: 'File', action: '', staff: user || 0 };
     if (token) {
         const { Info } = req.body;
         const filePath = `${config.FileServer.Path}${Info.folder}\\${Info.pj_id}\\${Info.type}\\${Info.filename}`;
@@ -595,6 +666,8 @@ module.exports.getFile = async (req, res) => {
 module.exports.delFile = async (req, res) => {
     logger.debuglog('Delete file');
     const token = req.headers["authorization"];
+    const user = req.headers["usxid"];
+    let logData = { module: 'File', action: '', staff: user || 0 };
     if (auth.ValidateToken(token)) {
         const { Info } = req.body;
         const result = await data.DelFile(Info);
@@ -628,7 +701,8 @@ module.exports.GetProjectLists = async (req, res) => {
 module.exports.SaveProducts = async (req, res) => {
     logger.debuglog('Save master product');
     const token = req.headers["authorization"];
-
+    const user = req.headers["usxid"];
+    let logData = { module: 'Product', action: '', staff: user || 0 };
     if (auth.ValidateToken(token)) {
         if (req.body) {
             const { Products } = req.body;
@@ -647,7 +721,8 @@ module.exports.SaveProducts = async (req, res) => {
 module.exports.SaveProjectProducts = async (req, res) => {
     logger.debuglog('Save master product');
     const token = req.headers["authorization"];
-
+    const user = req.headers["usxid"];
+    let logData = { module: 'Product', action: '', staff: user || 0 };
     if (auth.ValidateToken(token)) {
         if (req.body) {
             const { Products } = req.body;
@@ -698,6 +773,8 @@ module.exports.getProjectProduct = async (req, res) => {
 module.exports.Staff = async (req, res) => {
 
     const token = req.headers["authorization"];
+    const user = req.headers["usxid"];
+    let logData = { module: 'Staff', action: '', staff: user || 0 };
     if (auth.ValidateToken(token)   ) {
         if (req.body) {
             let result;
@@ -705,14 +782,20 @@ module.exports.Staff = async (req, res) => {
 
             if(mode === 'new'){
                 logger.debuglog('Add user');
+                logData.action = `add new user : ${Data.FirstName} ${Data.SurName}`;
+                await logger.DBlog(logData);
                 result = await staff.AddStaff(Data);
             }
             else if(mode === 'update'){
                 logger.debuglog('update user');
+                logData.action = `update user : ${Data.FirstName} ${Data.SurName}`;
+                await logger.DBlog(logData);
                 result = await staff.EditStaff(Data);
             }
             else if(mode === 'delete'){
                 logger.debuglog('delete user');
+                logData.action = `delete user : ${Data.staff_id} `;
+                await logger.DBlog(logData);
                 result = await staff.removeStaff(Data.staff_id)
             }
             else if(mode === 'list'){
@@ -725,6 +808,8 @@ module.exports.Staff = async (req, res) => {
             }
             else if(mode === 'chgpass'){
                 logger.debuglog('staff change password');
+                logData.action = `change password`;
+                await logger.DBlog(logData);
                 result = await staff.changePassword(Data);
             }
 
