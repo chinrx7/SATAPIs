@@ -263,6 +263,11 @@ module.exports.Timesheet = async (req,res) => {
             await logger.DBlog(logData);
             result = await ee.getTimesheet(Data);
         }
+        else if(mode === 'filter'){
+            logData.action = `get task list`;
+            await logger.DBlog(logData);
+            result = await ee.getFilterTimesheet(Data);
+        }
         else if(mode === 'get_pjtask'){
             logData.action = `get project task`;
             await logger.DBlog(logData);
@@ -439,6 +444,9 @@ module.exports.Contact = async (req, res) => {
 
             if (mode === 'new') {
                 result = await data.NewContact(contacts);
+            }
+            else if (mode === 'get') {
+                result = await data.GetContact(contacts);
             }
             else if (mode === 'update') {
                 result = await data.UpdateContact(contacts);

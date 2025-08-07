@@ -72,25 +72,21 @@ module.exports.DBlog = async (log) => {
 
         const Tname = `sys_event_${Cdate}`;
 
-        let query = `select COUNT(*) AS EXIST FROM information_schema.TABLES WHERE TABLE_SCHEMA='satdb' AND TABLE_NAME='${Tname}'`;
-
-        const Texist = await db.ExecQuery(query);
-
-        if (Texist[0].EXIST === 0) {
-            query = `CREATE TABLE ${Tname} (
+        // Use CREATE TABLE IF NOT EXISTS to avoid race conditions
+        let query = `CREATE TABLE IF NOT EXISTS ${Tname} (
             ID int NOT NULL AUTO_INCREMENT,
             module tinytext,
             action tinytext,
             event_date datetime(3) DEFAULT NULL,
             staff_id int DEFAULT NULL,
             PRIMARY KEY (ID)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3`
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3`;
 
-            await db.ExecQuery(query);
-        }
+        await db.ExecQuery(query);
 
+        // Insert the log entry
         query = `INSERT INTO ${Tname} (module, action, event_date, staff_id) 
-    VALUES ('${log.module}', '${log.action}', '${Edate}', '${log.staff}')`;
+            VALUES ('${log.module}', '${log.action}', '${Edate}', '${log.staff}')`;
 
         await db.ExecQuery(query);
         res = 'ok';

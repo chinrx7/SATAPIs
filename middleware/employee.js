@@ -60,6 +60,28 @@ module.exports.getTimesheet = async (T) => {
     return res;
 }
 
+module.exports.getFilterTimesheet = async (T) => {
+    let res;
+    const startDate = T.start ? `'${T.start}'` : 'NULL';
+    const endDate = T.end ? `'${T.end}'` : 'NULL';
+
+    const query = `
+        SELECT * FROM vw_timesheet 
+        WHERE staff_id = ${T.user_id}
+        AND (
+            (start_time BETWEEN ${startDate} AND ${endDate})
+            OR (end_time BETWEEN ${startDate} AND ${endDate})
+        )
+    `;
+    try {
+        res = await db.ExecQuery(query);
+    } catch (err) {
+        logger.loginfo(`get time sheet error : ${err}`);
+        res = 'error';
+    }
+    return res;
+};
+
 module.exports.getPJtask = async (T) => {
     let res;
     const query = `SELECT * FROM vw_project_tasks WHERE staff_id=${T.user_id}`;

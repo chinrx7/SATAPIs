@@ -142,6 +142,23 @@ module.exports.getShipAddr = async (S) => {
     return res;
 }
 
+module.exports.GetContact = async (Contact) => {
+    let res;
+
+    let query = `select * FROM cm_contacts WHERE ID='${Contact.ID}'`;
+
+    const data = await db.ExecQuery(query);
+    if (data.length > 0) {
+        res = data[0];
+    }
+    else {
+        res = 'error';
+    }
+
+    return res;
+}
+
+
 module.exports.NewContact = async (Contact) => {
     let res;
 
@@ -879,7 +896,7 @@ module.exports.getProjectDetail = async (pjkey) => {
     const detail = await db.ExecQuery(query);
 
     const IO = await db.ExecQuery(`SELECT IO FROM pj_projects WHERE pj_id='${pjkey}'`)
-    query = `SELECT ID,pj_id, docname, description, type, filename FROM vw_files WHERE pj_id='${IO[0].IO}'`;
+    query = `SELECT ID,pj_id, docname, description, type, filename, group_file FROM vw_files WHERE pj_id='${IO[0].IO}'`;
 
     const docs = await db.ExecQuery(query);
 
@@ -1207,7 +1224,7 @@ module.exports.createTicket = async (item, user) => {
     try{
 
         const ticketKey = await generateSPID();
-        const query = `INSERT INTO srv_services (ticket, name,  pj_id,  po_no,  cm_id,  cnt_id,  cc_id,  status,  priority,  department,  staff_id,  start_date,  end_date,  source,  topic,  detail,  response,  remark, require_document ) VALUES
+        const query = `INSERT INTO srv_services (ticket, name,  pj_id,  po_no,  cm_id,  cnt_id,  cc_id,  status,  priority,  department,  staff_id,  start_date,  source,  topic,  detail,  response,  remark, require_document ) VALUES
         (
             '${ ticketKey }', 
             '${item.Name}', 
@@ -1220,8 +1237,7 @@ module.exports.createTicket = async (item, user) => {
             '${item.Priority}', 
             '${item.Department}', 
             '${item.Staff_ID}', 
-            '${item.Start_Date}', 
-            '${item.End_Date}', 
+            '${item?.Start_Date??null}',
             '${item.Source}', 
             '${item.Topic}', 
             '${item.Detail}',
@@ -1229,7 +1245,15 @@ module.exports.createTicket = async (item, user) => {
             '${item.Remark}',
             '${item.Require_Doc ? item.Require_Doc : 0}'
         )`;
-        await db.ExecQuery(query);
+        const result = await db.ExecQuery(query);
+        if(result && result.insertId > 0 && item?.Task.length > 0){
+            const promiseMap = item.Task.map(async(task) => {
+                task.srv_key = ticketKey;
+                return await this.addSrvTask(task);
+            });
+            await Promise.allSettled(promiseMap);
+        }
+        console.log(result)
         const [staffList] = await Promise.all([
                 db.ExecQuery(`SELECT * FROM satdb.ee_staffs`)
         ]);
@@ -1341,8 +1365,8 @@ module.exports.updateTicket = async (item) => {
         priority='${ item.Priority }',  
         department='${ item.Department }',  
         staff_id='${ item.Staff_ID }',  
-        start_date='${ item.Start_Date }',  
-        end_date='${ item.End_Date }',  
+        start_date=${ item?.Start_Date ? `'${item.Start_Date}'` : 'NULL' },  
+        end_date=${ item?.End_Date ? `'${item.End_Date}'` : 'NULL' },  
         finish_date=${ item.Finish_Date ? `'${item.Finish_Date}'` : 'NULL' },
         source='${ item.Source }',  
         topic='${ item.Topic }',  
