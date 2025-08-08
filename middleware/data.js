@@ -1450,6 +1450,41 @@ module.exports.getTicketsByStaff = async (data) => {
     return res;
 };
 
+module.exports.getTicketsByLogs = async (data) => {
+    let res = [];
+    try {
+        //console.log(data)
+        let serviceListQuery;
+        if (data.Staff.toUpperCase() === 'ALL') {
+            serviceListQuery = `
+                SELECT * FROM vw_service_lists 
+                WHERE 
+                Customer='${data.Customer}'AND 
+                Start_Date >= '${data.StartDate}' 
+                AND End_Date <= '${data.EndDate}'
+            `;
+            } else {
+            serviceListQuery = `
+                SELECT * FROM vw_service_lists 
+                WHERE Staff='${data.Staff}' 
+                AND Customer='${data.Customer}'
+                AND Start_Date >= '${data.StartDate}' 
+                AND End_Date <= '${data.EndDate}'
+            `;
+        }
+        const serviceList = await db.ExecQuery(serviceListQuery);
+        //console.log(serviceList)
+        if(serviceList){
+            res = serviceList;
+        } else {
+            res = [];
+        }
+    } catch (err) {
+        logger.loginfo(`Get tickets error : ${err}`);
+        res = 'error';
+    }
+    return res;
+};
 
 module.exports.getTicketsDocument = async (data) => {
     let res;

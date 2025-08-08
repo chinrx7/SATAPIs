@@ -168,6 +168,9 @@ module.exports.Tickets = async (req, res) => {
         else if(mode === 'getbystaff'){
             result = await data.getTicketsByStaff(Data);
         }
+        else if(mode === 'getlog'){
+            result = await data.getTicketsByLogs(Data);
+        }
         else if(mode === 'get'){
             result = await data.getAllTickets();
         }
