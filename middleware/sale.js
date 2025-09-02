@@ -81,21 +81,39 @@ module.exports.getQT = async (Option) => {
 
     let { view, date } = Option;
     const Cdate = new Date(date);
-    let query, qMonth, qYear;
+    let query, qMonth, qYear, qQuarter;
+
     qMonth = Cdate.getMonth() + 1;
     qYear = Cdate.getFullYear();
 
-    if(view === 'm'){
-        query = `SELECT * FROM vw_qt WHERE MONTH(qt_date)='${qMonth}' AND YEAR(qt_date)='${qYear}'`;
+    // determine quarter from month
+    qQuarter = Math.floor((qMonth - 1) / 3) + 1;
+
+    if (view === 'm') {
+        query = `SELECT * FROM vw_qt 
+                 WHERE MONTH(qt_date)='${qMonth}' 
+                 AND YEAR(qt_date)='${qYear}'`;
     }
-    else if(view === 'y'){
-        query = `SELECT * FROM vw_qt WHERE YEAR(qt_date)='${qYear}'`;
+    else if (view === 'y') {
+        query = `SELECT * FROM vw_qt 
+                 WHERE YEAR(qt_date)='${qYear}'`;
+    }
+    else if (view === 'q') {
+        // quarter start month and end month
+        const startMonth = (qQuarter - 1) * 3 + 1;
+        const endMonth = qQuarter * 3;
+
+        query = `SELECT * FROM vw_qt 
+                 WHERE MONTH(qt_date) BETWEEN '${startMonth}' AND '${endMonth}' 
+                 AND YEAR(qt_date)='${qYear}'`;
     }
 
     const qt = await db.ExecQuery(query);
 
-    for await(let q of qt){
-        query = `SELECT * FROM sl_qt_files WHERE qt_no='${q.no}' AND rev='${q.rev}'`;
+    for await (let q of qt) {
+        query = `SELECT * FROM sl_qt_files 
+                 WHERE qt_no='${q.no}' 
+                 AND rev='${q.rev}'`;
         const files = await db.ExecQuery(query);
 
         q.Files = files;
@@ -104,7 +122,51 @@ module.exports.getQT = async (Option) => {
     }
 
     return res;
-}
+};
+
+
+module.exports.getSummerizeQT = async (Option) => {
+    let res = [];
+
+    let { view, date } = Option;
+    const Cdate = new Date(date);
+    let query, qMonth, qYear, qQuarter;
+
+    qMonth = Cdate.getMonth() + 1;
+    qYear = Cdate.getFullYear();
+    qQuarter = Math.floor((qMonth - 1) / 3) + 1;
+
+    // base query
+    query = `
+        SELECT 
+            COUNT(*) AS total, 
+            SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) AS open,
+            SUM(CASE WHEN status <> 1 THEN 1 ELSE 0 END) AS purchased
+        FROM sl_quotation
+    `;
+
+    // filter by view
+    if (view === 'y') {
+        query += ` WHERE YEAR(qt_date) = '${qYear}'`;
+    }
+    else if (view === 'q') {
+        const startMonth = (qQuarter - 1) * 3 + 1;
+        const endMonth = qQuarter * 3;
+        query += ` WHERE YEAR(qt_date) = '${qYear}' 
+                   AND MONTH(qt_date) BETWEEN '${startMonth}' AND '${endMonth}'`;
+    }
+    // view === 'all' → no WHERE condition
+
+    const qt = await db.ExecQuery(query);
+
+    if (qt) {
+        res = qt[0]; // return single object instead of array
+    }
+
+    return res;
+};
+
+
 
 module.exports.updateQT = async (s) => {
     let res;

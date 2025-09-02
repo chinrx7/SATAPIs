@@ -310,6 +310,9 @@ module.exports.Quotation = async (req, res) => {
         else if(mode === 'get'){
             result = await sale.getQT(Data);
         }
+        else if(mode === 'summary'){
+            result = await sale.getSummerizeQT(Data);
+        }
         else if(mode === 'update'){
             logData.action = `update quotation ${Data.ID} status : ${Data.status}`;
             await logger.DBlog(logData);
